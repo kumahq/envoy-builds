@@ -3,7 +3,7 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  test:
+  build:
     # virtual environments: https://github.com/actions/virtual-environments
     runs-on: ubuntu-20.04
     env:
@@ -34,4 +34,5 @@ jobs:
           git clone -n https://github.com/envoyproxy/envoy.git .
           git checkout $ENVOY_TAG
       - name: build envoy
+        run: |
           docker run -v `pwd`/build/envoy-sources:/src/envoy -w /src/envoy envoyproxy/envoy-build-ubuntu -- ./ci/run_envoy_docker.sh './ci/do_ci.sh bazel.release'
