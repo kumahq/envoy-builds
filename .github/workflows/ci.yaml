@@ -1,0 +1,35 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    # virtual environments: https://github.com/actions/virtual-environments
+    runs-on: ubuntu-20.04
+    env:
+      OS: linux
+      ARCH: amd64
+      ENVOY_DISTRO: linux
+      ENVOY_TAG: b16d390f11376e47f479778f2362ea4f48bdc895
+
+    steps:
+      # Caches and restores the bazelisk download directory, the bazel build directory.
+      - name: Cache bazel
+        uses: actions/cache@v2.1.4
+        env:
+          cache-name: bazel-cache
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/bazel
+          key: ${{ runner.os }}-${{ env.cache-name }}
+
+      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+      # the rest of the steps
+      - uses: actions/checkout@v2
+
+      # build
+      - name: Build the code
+        run: make envoy/build
+      # - name: Run the test
+      #   run: bazel test //...
