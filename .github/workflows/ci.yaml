@@ -30,6 +30,4 @@ jobs:
 
       # build
       - name: Build the code
-        run: make envoy/build
-      # - name: Run the test
-      #   run: bazel test //...
+        run: make build/envoy
