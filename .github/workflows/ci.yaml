@@ -34,5 +34,7 @@ jobs:
           git clone -n https://github.com/envoyproxy/envoy.git .
           git checkout $ENVOY_TAG
       - name: build envoy
+        env:
+          IMAGE_NAME: envoyproxy/envoy-build-ubuntu
         run: |
-          docker run -v `pwd`/build/envoy-sources:/src/envoy -w /src/envoy envoyproxy/envoy-build-ubuntu -- ./ci/run_envoy_docker.sh './ci/do_ci.sh bazel.release'
+          ./ci/run_envoy_docker.sh './ci/do_ci.sh bazel.release'
