@@ -36,5 +36,6 @@ jobs:
       - name: build envoy
         env:
           IMAGE_NAME: envoyproxy/envoy-build-ubuntu
+        working-directory: build/envoy-sources
         run: |
           ./ci/run_envoy_docker.sh './ci/do_ci.sh bazel.release'
