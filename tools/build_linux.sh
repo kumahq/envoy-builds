@@ -26,7 +26,7 @@ echo "BUILD_CMD=${BUILD_CMD}"
 docker build -t "${LOCAL_BUILD_IMAGE}" --progress=plain \
   --build-arg ENVOY_BUILD_IMAGE="${ENVOY_BUILD_IMAGE}" \
   --build-arg BUILD_CMD="${BUILD_CMD}" \
-  -f "${KUMA_DIR:-.}/tools/Dockerfile.build-ubuntu" "${SOURCE_DIR}"
+  -f "${WORK_DIR}/tools/Dockerfile.build-ubuntu" "${SOURCE_DIR}"
 
 # copy out the binary
 id=$(docker create "${LOCAL_BUILD_IMAGE}")
