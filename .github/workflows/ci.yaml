@@ -32,5 +32,6 @@ jobs:
           mkdir -p build/envoy-sources
           cd build/envoy-sources
           git clone https://github.com/envoyproxy/envoy.git
+          git fetch origin -a
           git checkout $ENVOY_TAG
           docker run -v `pwd`:/src/envoy -w /src/envoy envoyproxy/envoy-build-ubuntu -- ./ci/run_envoy_docker.sh './ci/do_ci.sh bazel.release'
