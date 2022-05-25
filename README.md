@@ -24,7 +24,7 @@ Download the specific Envoy tag:
 $ ENVOY_TAG=v1.18.4 make build/envoy
 ```
 
-Download the specific Envoy commit hash (if it exists in [download.konghq.com](download.konghq.com)):
+Download the specific Envoy commit hash (if it exists in [download.konghq.com](https://download.konghq.com)):
 ```shell
 $ ENVOY_TAG=bef18019d8fc33a4ed6aca3679aff2100241ac5e make build/envoy
 ```
