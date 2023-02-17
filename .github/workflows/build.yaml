@@ -1,0 +1,35 @@
+name: Build
+
+on:
+  push: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v3
+      - run:
+          ssh-keygen -t ed25519
+      - uses: hashicorp/setup-terraform@v2
+      - run: terraform init
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.NIGHTLY_AWS_ACCOUNT_ID }}:role/envoy-ci
+          aws-region: us-east-2
+      - run: terraform plan
+      - run: terraform apply -var public_key_path=~/.ssh/id_ed25519.pub
+      - id: public-ip
+        run: terraform output --raw public_ip
+      - name: Build Envoy
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ steps.public-ip.outputs.stdout }}
+          username: admin
+          key_path: ~/.ssh/id_ed25519
+          script: |
+            git clone https://github.com/kumahq/kuma && cd kuma
+            BUILD_ENVOY_FROM_SOURCES=true make build/envoy
