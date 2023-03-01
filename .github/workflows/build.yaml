@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v3
+      # TODO use aws ssm
+      - name: Generate SSH key
+        run:
+          ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_ed25519
+      - uses: hashicorp/setup-terraform@v2.0.3
+      - run: terraform init
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
+          role-duration-seconds: 10800
+          aws-region: us-east-2
+      - run: terraform apply -auto-approve
+      - id: public-ip
+        # setup-terraform saves stdout of terraform calls to outputs
+        run: terraform output --raw public_ip
+      - name: Wait for reachable machine
+        timeout-minutes: 2
+        run: |
+          while ! ssh -o StrictHostKeyChecking=no admin@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
+          do
+            sleep 5
+          done
+      - name: Build Envoy
+        # TODO: put admin in the docker group
+        run: |
+          ssh -o StrictHostKeyChecking=no admin@${{ steps.public-ip.outputs.stdout }} <<'EOF'
+            sudo -i
+            cd /home/admin
+            git clone https://github.com/kumahq/kuma && cd kuma
+            BUILD_ENVOY_FROM_SOURCES=true make build/envoy
+          EOF
+      - name: Download Envoy binaries
+        run: |
+          scp -o StrictHostKeyChecking=no -r admin@${{ steps.public-ip.outputs.stdout }}:~/kuma/build/artifacts-linux-amd64/envoy .
+      - uses: actions/upload-artifact@v3
+        with:
+          name: envoy
+          path: terraform/envoy/
+          if-no-files-found: error
+      - run: terraform destroy -auto-approve
+        if: always()
