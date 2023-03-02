@@ -32,7 +32,7 @@ jobs:
       - id: public-ip
         # setup-terraform saves stdout of terraform calls to outputs
         run: terraform output --raw public_ip
-      - name: Wait for reachable machine
+      - name: Wait for ready machine
         timeout-minutes: 2
         run: |
           while ! ssh -o StrictHostKeyChecking=no admin@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
@@ -40,11 +40,8 @@ jobs:
             sleep 5
           done
       - name: Build Envoy
-        # TODO: put admin in the docker group
         run: |
           ssh -o StrictHostKeyChecking=no admin@${{ steps.public-ip.outputs.stdout }} <<'EOF'
-            sudo -i
-            cd /home/admin
             git clone https://github.com/kumahq/kuma && cd kuma
             BUILD_ENVOY_FROM_SOURCES=true make build/envoy
           EOF
