@@ -12,6 +12,15 @@ variable "arch" {
   }
 }
 
+variable "os" {
+  type = string
+  description = "linux or darwin"
+  validation {
+    condition     = contains(["linux", "darwin"], var.os)
+    error_message = "linux or darwin"
+  }
+}
+
 provider "aws" {
   region = "us-east-2"
 }
@@ -22,13 +31,9 @@ module "vpc" {
   name = "envoy-ci"
   cidr = "10.0.0.0/16"
 
-  azs             = ["us-east-2a"]
+  azs             = ["us-east-2b"]
   private_subnets = []
   public_subnets  = ["10.0.101.0/24"]
-}
-
-data "aws_ssm_parameter" "debian" {
-  name = "/aws/service/debian/release/11/latest/${var.arch}"
 }
 
 module "security_group" {
@@ -46,8 +51,12 @@ resource "aws_key_pair" "ci" {
 }
 
 resource "aws_instance" "envoy-ci-build" {
-  ami           = data.aws_ssm_parameter.debian.value
-  instance_type = var.arch == "amd64" ? "t3.2xlarge" : "t4g.2xlarge"
+  ami           = var.os == "linux" ? data.aws_ssm_parameter.debian.value : data.aws_ami.mac.image_id
+
+  instance_type = (var.os == "linux"
+    ? (var.arch == "amd64" ? "t3.2xlarge" : "t4g.2xlarge")
+    : (var.arch == "amd64" ? "mac1.metal" : "mac2.metal")
+  )
 
   iam_instance_profile = aws_iam_instance_profile.envoy-ci-build.name
 
@@ -58,43 +67,15 @@ resource "aws_instance" "envoy-ci-build" {
   }
 
   root_block_device {
-    volume_size = "50"
+    volume_size = "100"
   }
 
   subnet_id                   = module.vpc.public_subnets[0]
   vpc_security_group_ids      = [module.security_group.security_group_id]
 
-  user_data = <<EOF
-#!/bin/bash
-set -e
+  user_data = var.os == "linux" ? local.linux_user_data : local.macos_user_data
 
-apt-get update
-apt-get install -y \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release \
-    git \
-    make \
-    golang \
-    gpg \
-    python3 \
-    python-is-python3
-
-sudo mkdir -m 0755 -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-apt-get update
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-usermod -a -G docker admin
-
-touch /home/admin/ready
-EOF
+  host_id = var.os == "darwin" ? var.host_id : ""
 
   user_data_replace_on_change = true
 }
