@@ -1,7 +1,15 @@
 variable "public_key_path" {
   type = string
-  default = "~/.ssh/id_ed25519.pub"
   description = "Path to public key for creating a key pair"
+}
+
+variable "arch" {
+  type = string
+  description = "amd64 or arm64"
+  validation {
+    condition     = contains(["amd64", "arm64"], var.arch)
+    error_message = "amd64 or arm64"
+  }
 }
 
 provider "aws" {
@@ -20,7 +28,7 @@ module "vpc" {
 }
 
 data "aws_ssm_parameter" "debian" {
-  name = "/aws/service/debian/release/11/latest/amd64"
+  name = "/aws/service/debian/release/11/latest/${var.arch}"
 }
 
 module "security_group" {
@@ -39,7 +47,7 @@ resource "aws_key_pair" "ci" {
 
 resource "aws_instance" "envoy-ci-build" {
   ami           = data.aws_ssm_parameter.debian.value
-  instance_type = "t3.2xlarge"
+  instance_type = var.arch == "amd64" ? "t3.2xlarge" : "t4g.2xlarge"
 
   iam_instance_profile = aws_iam_instance_profile.envoy-ci-build.name
 
