@@ -1,10 +1,10 @@
 variable "public_key_path" {
-  type = string
+  type        = string
   description = "Path to public key for creating a key pair"
 }
 
 variable "arch" {
-  type = string
+  type        = string
   description = "amd64 or arm64"
   validation {
     condition     = contains(["amd64", "arm64"], var.arch)
@@ -13,7 +13,7 @@ variable "arch" {
 }
 
 variable "os" {
-  type = string
+  type        = string
   description = "linux or darwin"
   validation {
     condition     = contains(["linux", "darwin"], var.os)
@@ -28,7 +28,7 @@ provider "aws" {
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
-  name = "envoy-ci"
+  name = "envoy-ci-${var.os}-${var.arch}"
   cidr = "10.0.0.0/16"
 
   azs             = ["us-east-2b"]
@@ -39,19 +39,19 @@ module "vpc" {
 module "security_group" {
   source = "terraform-aws-modules/security-group/aws//modules/ssh"
 
-  name        = "envoy-ci-ssh"
-  vpc_id      = module.vpc.vpc_id
+  name   = "envoy-ci-ssh"
+  vpc_id = module.vpc.vpc_id
 
   ingress_cidr_blocks = ["0.0.0.0/0"]
 }
 
 resource "aws_key_pair" "ci" {
-  key_name = "envoy-ci"
+  key_name   = "envoy-ci-${var.os}-${var.arch}"
   public_key = trimspace(file(var.public_key_path))
 }
 
 resource "aws_instance" "envoy-ci-build" {
-  ami           = var.os == "linux" ? data.aws_ssm_parameter.debian.value : data.aws_ami.mac.image_id
+  ami = var.os == "linux" ? data.aws_ssm_parameter.debian.value : data.aws_ami.mac.image_id
 
   instance_type = (var.os == "linux"
     ? (var.arch == "amd64" ? "t3.2xlarge" : "t4g.2xlarge")
@@ -63,15 +63,15 @@ resource "aws_instance" "envoy-ci-build" {
   key_name = aws_key_pair.ci.id
 
   tags = {
-    Name = "envoy-ci"
+    Name = "envoy-ci-${var.os}-${var.arch}"
   }
 
   root_block_device {
     volume_size = "100"
   }
 
-  subnet_id                   = module.vpc.public_subnets[0]
-  vpc_security_group_ids      = [module.security_group.security_group_id]
+  subnet_id              = module.vpc.public_subnets[0]
+  vpc_security_group_ids = [module.security_group.security_group_id]
 
   user_data = var.os == "linux" ? local.linux_user_data : local.macos_user_data
 
@@ -83,11 +83,11 @@ resource "aws_instance" "envoy-ci-build" {
 resource "aws_iam_instance_profile" "envoy-ci-build" {
   role = aws_iam_role.role.name
 
-  name        = "envoy-ci-build"
+  name = "envoy-ci-build-${var.os}-${var.arch}"
 }
 
 resource "aws_iam_role" "role" {
-  name = "envoy-ci-build"
+  name = "envoy-ci-build-${var.os}-${var.arch}"
   path = "/"
 
   assume_role_policy = <<EOF
