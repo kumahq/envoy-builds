@@ -10,6 +10,13 @@ on:
         description: Architecture to build Envoy for Linux
         type: choice
         required: true
+      os:
+        options:
+          - darwin
+          - linux
+        description: OS to build Envoy for
+        type: choice
+        required: true
 
 permissions:
   id-token: write
@@ -35,36 +42,52 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
           role-duration-seconds: 10800
           aws-region: us-east-2
+      - name: Find Mac OS dedicated host
+        if: github.event.inputs.os == 'darwin'
+        run: |
+          ./find-or-create-host.sh '${{ github.event.inputs.arch }}'
       - name: Set terraform variables
         run: |
-          cat <<EOF > terraform.tfvars
-          arch = "${{ github.event.inputs.arch }}"
+          cat <<EOF >> terraform.tfvars
           public_key_path = "~/.ssh/id_ed25519.pub"
+          arch = "${{ github.event.inputs.arch }}"
+          os = "${{ github.event.inputs.os }}"
           EOF
-      - run: terraform apply -auto-approve
+
+          if [[ "${{ github.event.inputs.os }}" == linux ]]; then
+            echo "SSH_USER=admin" >> $GITHUB_ENV
+          else
+            echo "SSH_USER=ec2-user" >> $GITHUB_ENV
+          fi
+      - run: terraform apply -input=false -auto-approve
+        id: terraform-apply
       - id: public-ip
         # setup-terraform saves stdout of terraform calls to outputs
         run: terraform output --raw public_ip
       - name: Wait for VM to be ready
-        timeout-minutes: 2
+        timeout-minutes: 20
         run: |
-          while ! ssh -o StrictHostKeyChecking=no admin@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
+          while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
           do
             sleep 5
           done
       - name: Build Envoy
         run: |
-          ssh -o StrictHostKeyChecking=no admin@${{ steps.public-ip.outputs.stdout }} <<'EOF'
+          ssh ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
+            if [[ "${{ github.event.inputs.os }}" == darwin ]]; then
+              export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=11.7 --host_copt=-mmacos-version-min=11.7"
+            fi
             git clone https://github.com/kumahq/kuma && cd kuma
             BUILD_ENVOY_FROM_SOURCES=true make build/envoy
           EOF
       - name: Download Envoy binaries
         run: |
-          scp -o StrictHostKeyChecking=no -r admin@${{ steps.public-ip.outputs.stdout }}:~/kuma/build/artifacts-linux-${{ github.event.inputs.arch }}/envoy .
+          envoy_dir="~/kuma/build/artifacts-${{ github.event.inputs.os }}-${{ github.event.inputs.arch }}/envoy"
+          scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
       - uses: actions/upload-artifact@v3
         with:
           name: envoy
           path: terraform/envoy/
           if-no-files-found: error
-      - run: terraform destroy -auto-approve
-        if: always()
+      - run: terraform destroy -input=false -auto-approve
+        if: always() && steps.terraform-apply.outcome != 'skipped'

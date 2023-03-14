@@ -1,14 +1,23 @@
 variable "public_key_path" {
-  type = string
+  type        = string
   description = "Path to public key for creating a key pair"
 }
 
 variable "arch" {
-  type = string
+  type        = string
   description = "amd64 or arm64"
   validation {
     condition     = contains(["amd64", "arm64"], var.arch)
     error_message = "amd64 or arm64"
+  }
+}
+
+variable "os" {
+  type        = string
+  description = "linux or darwin"
+  validation {
+    condition     = contains(["linux", "darwin"], var.os)
+    error_message = "linux or darwin"
   }
 }
 
@@ -19,82 +28,54 @@ provider "aws" {
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
-  name = "envoy-ci"
+  name = "envoy-ci-${var.os}-${var.arch}"
   cidr = "10.0.0.0/16"
 
-  azs             = ["us-east-2a"]
+  azs             = ["us-east-2b"]
   private_subnets = []
   public_subnets  = ["10.0.101.0/24"]
-}
-
-data "aws_ssm_parameter" "debian" {
-  name = "/aws/service/debian/release/11/latest/${var.arch}"
 }
 
 module "security_group" {
   source = "terraform-aws-modules/security-group/aws//modules/ssh"
 
-  name        = "envoy-ci-ssh"
-  vpc_id      = module.vpc.vpc_id
+  name   = "envoy-ci-ssh"
+  vpc_id = module.vpc.vpc_id
 
   ingress_cidr_blocks = ["0.0.0.0/0"]
 }
 
 resource "aws_key_pair" "ci" {
-  key_name = "envoy-ci"
+  key_name   = "envoy-ci-${var.os}-${var.arch}"
   public_key = trimspace(file(var.public_key_path))
 }
 
 resource "aws_instance" "envoy-ci-build" {
-  ami           = data.aws_ssm_parameter.debian.value
-  instance_type = var.arch == "amd64" ? "t3.2xlarge" : "t4g.2xlarge"
+  ami = var.os == "linux" ? data.aws_ssm_parameter.debian.value : data.aws_ami.mac.image_id
+
+  instance_type = (var.os == "linux"
+    ? (var.arch == "amd64" ? "t3.2xlarge" : "t4g.2xlarge")
+    : (var.arch == "amd64" ? "mac1.metal" : "mac2.metal")
+  )
 
   iam_instance_profile = aws_iam_instance_profile.envoy-ci-build.name
 
   key_name = aws_key_pair.ci.id
 
   tags = {
-    Name = "envoy-ci"
+    Name = "envoy-ci-${var.os}-${var.arch}"
   }
 
   root_block_device {
-    volume_size = "50"
+    volume_size = "100"
   }
 
-  subnet_id                   = module.vpc.public_subnets[0]
-  vpc_security_group_ids      = [module.security_group.security_group_id]
+  subnet_id              = module.vpc.public_subnets[0]
+  vpc_security_group_ids = [module.security_group.security_group_id]
 
-  user_data = <<EOF
-#!/bin/bash
-set -e
+  user_data = var.os == "linux" ? local.linux_user_data : local.macos_user_data
 
-apt-get update
-apt-get install -y \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release \
-    git \
-    make \
-    golang \
-    gpg \
-    python3 \
-    python-is-python3
-
-sudo mkdir -m 0755 -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-apt-get update
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-usermod -a -G docker admin
-
-touch /home/admin/ready
-EOF
+  host_id = var.os == "darwin" ? var.host_id : ""
 
   user_data_replace_on_change = true
 }
@@ -102,11 +83,11 @@ EOF
 resource "aws_iam_instance_profile" "envoy-ci-build" {
   role = aws_iam_role.role.name
 
-  name        = "envoy-ci-build"
+  name = "envoy-ci-build-${var.os}-${var.arch}"
 }
 
 resource "aws_iam_role" "role" {
-  name = "envoy-ci-build"
+  name = "envoy-ci-build-${var.os}-${var.arch}"
   path = "/"
 
   assume_role_policy = <<EOF
