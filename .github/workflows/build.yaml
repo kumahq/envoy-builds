@@ -75,6 +75,7 @@ jobs:
         run: |
           ssh ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
             if [[ "${{ github.event.inputs.os }}" == darwin ]]; then
+              export PATH="/opt/homebrew/bin:$PATH"
               export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=11.7 --host_copt=-mmacos-version-min=11.7"
             fi
             git clone https://github.com/kumahq/kuma && cd kuma
