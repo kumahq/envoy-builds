@@ -21,6 +21,27 @@ variable "os" {
   }
 }
 
+locals {
+  ami = {
+    linux = data.aws_ssm_parameter.debian.value
+    darwin = data.aws_ami.mac.image_id
+  }
+  instance_type = {
+    darwin = {
+      amd64 = "mac1.metal"
+      arm64 = "mac2.metal"
+    }
+    linux = {
+      amd64 = "t3.2xlarge"
+      arm64 = "t4g.2xlarge"
+    }
+  }
+  user_data = {
+    linux = local.linux_user_data
+    darwin = local.macos_user_data
+  }
+}
+
 provider "aws" {
   region = "us-east-2"
 }
@@ -51,12 +72,9 @@ resource "aws_key_pair" "ci" {
 }
 
 resource "aws_instance" "envoy-ci-build" {
-  ami = var.os == "linux" ? data.aws_ssm_parameter.debian.value : data.aws_ami.mac.image_id
+  ami = local.ami[var.os]
 
-  instance_type = (var.os == "linux"
-    ? (var.arch == "amd64" ? "t3.2xlarge" : "t4g.2xlarge")
-    : (var.arch == "amd64" ? "mac1.metal" : "mac2.metal")
-  )
+  instance_type = local.instance_type[var.os][var.arch]
 
   iam_instance_profile = aws_iam_instance_profile.envoy-ci-build.name
 
@@ -73,7 +91,7 @@ resource "aws_instance" "envoy-ci-build" {
   subnet_id              = module.vpc.public_subnets[0]
   vpc_security_group_ids = [module.security_group.security_group_id]
 
-  user_data = var.os == "linux" ? local.linux_user_data : local.macos_user_data
+  user_data = local.user_data[var.os]
 
   host_id = var.os == "darwin" ? var.host_id : ""
 
