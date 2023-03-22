@@ -47,7 +47,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v3
       # TODO use aws ssm
@@ -57,7 +57,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
-          role-duration-seconds: 10800
+          role-duration-seconds: 20800
           aws-region: us-east-2
       - uses: hashicorp/setup-terraform@v2.0.3
       - run: terraform init
@@ -103,11 +103,23 @@ jobs:
               export PATH="/opt/homebrew/bin:$PATH"
               export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=11.7 --host_copt=-mmacos-version-min=11.7"
             fi
+
             export ENVOY_VERSION="${{ inputs.version }}"
             REPO="${{ github.repository }}"
             git clone "https://github.com/$REPO" && cd "${REPO#${{ github.repository_owner }}/}"
             git checkout ${{ github.sha }}
             make build/envoy
+
+            if [[
+              "${{ github.event.inputs.os }}" == linux &&
+              "${{ github.event.inputs.arch }}" == amd64
+            ]]; then
+              BUILD_ENVOY_FROM_SOURCES=true ENVOY_DISTRO=centos make build/envoy &
+            fi
+
+            BUILD_ENVOY_FROM_SOURCES=true make build/envoy
+            wait
+
             mv build ..
           EOF
       - name: Download Envoy binaries
