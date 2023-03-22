@@ -1,15 +1,24 @@
-WORK_DIR ?= .
+GOOS := $(shell go env GOOS)
+GOARCH := $(shell go env GOARCH)
 
 BUILD_ENVOY_FROM_SOURCES ?= false
+ENVOY_TAG ?= v$(ENVOY_VERSION)
+ENVOY_ARTIFACT_EXT ?=
 
-# Remember to update pkg/version/compatibility.go
-ENVOY_VERSION = $(shell ${WORK_DIR}/tools/version.sh ${ENVOY_TAG})
+ifeq ($(GOOS),linux)
+	ENVOY_DISTRO ?= alpine
+endif
+ENVOY_DISTRO ?= $(GOOS)
 
-ARCH=amd64
-ENVOY_DISTRO=linux
-OS=linux
+ifeq ($(ENVOY_DISTRO),centos)
+	BUILD_ENVOY_SCRIPT = scripts/build_centos.sh
+endif
+BUILD_ENVOY_SCRIPT ?= scripts/build_$(GOOS).sh
 
-SOURCE_DIR=build/envoy-sources
+SOURCE_DIR ?= ${TMPDIR}envoy-sources
+ifndef TMPDIR
+	SOURCE_DIR ?= /tmp/envoy-sources
+endif
 
 # Target 'build/envoy' allows to put Envoy binary under the build/artifacts-$GOOS-$GOARCH/envoy directory.
 # Depending on the flag BUILD_ENVOY_FROM_SOURCES this target either fetches Envoy from binary registry or
@@ -18,20 +27,30 @@ SOURCE_DIR=build/envoy-sources
 # hash values.
 .PHONY: build/envoy
 build/envoy:
+	GOOS=${GOOS} \
+	GOARCH=${GOARCH} \
 	ENVOY_DISTRO=${ENVOY_DISTRO} \
 	ENVOY_VERSION=${ENVOY_VERSION} \
-	$(MAKE) build/artifacts-${OS}-${ARCH}/envoy/envoy-${ENVOY_VERSION}-${ENVOY_DISTRO}
+	$(MAKE) build/artifacts-${GOOS}-${GOARCH}/envoy/envoy-${ENVOY_VERSION}-${ENVOY_DISTRO}
 
-build/artifacts-${OS}-${ARCH}/envoy/envoy-${ENVOY_VERSION}-${ENVOY_DISTRO}:
-	ENVOY_TAG=${ENVOY_TAG} \
-	SOURCE_DIR=${SOURCE_DIR} ${WORK_DIR}/tools/fetch_sources.sh && \
-	ENVOY_TAG=${ENVOY_TAG} \
+.PHONY: build/artifacts-linux-amd64/envoy/envoy
+build/artifacts-linux-amd64/envoy/envoy:
+	GOOS=linux GOARCH=amd64 $(MAKE) build/envoy
+
+.PHONY: build/artifacts-linux-arm64/envoy/envoy
+build/artifacts-linux-arm64/envoy/envoy:
+	GOOS=linux GOARCH=arm64 $(MAKE) build/envoy
+
+build/artifacts-${GOOS}-${GOARCH}/envoy/envoy-${ENVOY_VERSION}-${ENVOY_DISTRO}:
+	ENVOY_TAG=$(ENVOY_TAG) \
 	SOURCE_DIR=${SOURCE_DIR} \
-	WORK_DIR=${WORK_DIR} \
-	BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS} \
-	BINARY_PATH=$@ ${WORK_DIR}/tools/build_${ENVOY_DISTRO}.sh
+	KUMA_DIR=${KUMA_DIR} \
+	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS}" \
+	BINARY_PATH=$@ $(BUILD_ENVOY_SCRIPT)
 
 .PHONY: clean/envoy
 clean/envoy:
 	rm -rf ${SOURCE_DIR}
-	rm -rf build/artifacts-${OS}-${ARCH}/envoy/
+	rm -rf build/artifacts-${GOOS}-${GOARCH}/envoy/
+	rm -rf build/envoy/
+WORK_DIR ?= .
