@@ -8,8 +8,8 @@ echo "Building Envoy for Linux"
 
 mkdir -p "$(dirname "${BINARY_PATH}")"
 
-SOURCE_DIR="${SOURCE_DIR}" "${KUMA_DIR:-.}/tools/envoy/fetch_sources.sh"
-CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "${KUMA_DIR:-.}/tools/envoy/contrib_enabled_matrix.py")
+SOURCE_DIR="${SOURCE_DIR}" "scripts/fetch_sources.sh"
+CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "scripts/contrib_enabled_matrix.py")
 
 BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS:-""}
 read -ra BAZEL_BUILD_EXTRA_OPTIONS <<< "${BAZEL_BUILD_EXTRA_OPTIONS}"
@@ -34,7 +34,7 @@ echo "BUILD_CMD=${BUILD_CMD}"
 docker build -t "${LOCAL_BUILD_IMAGE}" --progress=plain \
   --build-arg ENVOY_BUILD_IMAGE="${ENVOY_BUILD_IMAGE}" \
   --build-arg BUILD_CMD="${BUILD_CMD}" \
-  -f "${KUMA_DIR:-.}/tools/envoy/Dockerfile.build-ubuntu" "${SOURCE_DIR}"
+  -f "scripts/Dockerfile.build-ubuntu" "${SOURCE_DIR}"
 
 # copy out the binary
 id=$(docker create "${LOCAL_BUILD_IMAGE}")

@@ -10,8 +10,6 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-source "$(dirname -- "${BASH_SOURCE[0]}")/../common.sh"
-
 # clone Envoy repo if not exists
 if [[ ! -d "${SOURCE_DIR}" ]]; then
   mkdir -p "${SOURCE_DIR}"

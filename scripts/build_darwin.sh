@@ -8,10 +8,10 @@ echo "Building Envoy for Darwin"
 
 mkdir -p "$(dirname "${BINARY_PATH}")"
 
-SOURCE_DIR="${SOURCE_DIR}" "${KUMA_DIR:-.}/tools/envoy/fetch_sources.sh"
-CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "${KUMA_DIR:-.}/tools/envoy/contrib_enabled_matrix.py")
+SOURCE_DIR="${SOURCE_DIR}" "scripts/fetch_sources.sh"
+CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "scripts/contrib_enabled_matrix.py")
 
-PATCH_FILE=$(realpath "${KUMA_DIR:-.}/tools/envoy/BUILD-darwin-arm64.patch")
+PATCH_FILE=$(realpath "scripts/BUILD-darwin-arm64.patch")
 
 pushd "${SOURCE_DIR}"
 
