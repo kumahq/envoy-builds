@@ -38,7 +38,7 @@ jobs:
             for bin in "${dir}"/*; do
               bin="$(basename "${bin}")"
               IFS=- read -r envoy ver distro <<< "${bin}"
-              archive_name="envoy-${os}-${arch}-${ver}"
+              archive_name="envoy-${os}-${arch}-v${ver}"
               if [[ "${distro}" != "${os}" ]]; then
                 archive_name="${archive_name}-${distro}"
               fi
