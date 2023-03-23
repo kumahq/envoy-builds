@@ -32,8 +32,12 @@ jobs:
             for bin in "${dir}"/*; do
               bin="$(basename "${bin}")"
               IFS=- read -r envoy ver distro <<< "${bin}"
+              archive_name="envoy-${os}-${arch}-${ver}"
+              if [[ "${distro}" != "${os}" ]]; then
+                archive_name="${archive_name}-${distro}"
+              fi
               # move file into tar.gz and rename to 'envoy' in archive
-              tar -C "${dir}" "--transform=flags=r;s|${bin}|envoy|" -czvf "out/envoy-${os}-${arch}-${ver}-${distro}.tar.gz" "${bin}"
+              tar -C "${dir}" "--transform=flags=r;s|${bin}|envoy|" -czvf "out/${archive_name}.tar.gz" "${bin}"
             done
           done
       - name: Release
