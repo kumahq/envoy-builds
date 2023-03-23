@@ -3,6 +3,10 @@ name: Build
 on:
   workflow_call:
     inputs:
+      version:
+        description: Envoy version to build (don't include leading v)
+        type: string
+        required: true
       arch:
         description: Architecture to build Envoy for Linux
         type: string
