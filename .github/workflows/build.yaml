@@ -17,6 +17,10 @@ on:
         required: true
   workflow_dispatch:
     inputs:
+      version:
+        description: Envoy version to build (don't include leading v)
+        type: string
+        required: true
       arch:
         options:
           - amd64
@@ -92,12 +96,16 @@ jobs:
               export PATH="/opt/homebrew/bin:$PATH"
               export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=11.7 --host_copt=-mmacos-version-min=11.7"
             fi
-            git clone https://github.com/kumahq/kuma && cd kuma
-            BUILD_ENVOY_FROM_SOURCES=true make build/envoy
+            export ENVOY_VERSION="${{ inputs.version }}"
+            REPO="${{ github.repository }}"
+            git clone "https://github.com/$REPO" && cd "${REPO#${{ github.repository_owner }}/}"
+            git checkout ${{ github.sha }}
+            make build/envoy
+            mv build ..
           EOF
       - name: Download Envoy binaries
         run: |
-          envoy_dir="~/kuma/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
+          envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
           scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
       - uses: actions/upload-artifact@v3
         with:
