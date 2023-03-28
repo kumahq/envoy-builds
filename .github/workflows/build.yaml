@@ -3,6 +3,10 @@ name: Build
 on:
   workflow_call:
     inputs:
+      version:
+        description: Envoy version to build (don't include leading v)
+        type: string
+        required: true
       arch:
         description: Architecture to build Envoy for Linux
         type: string
@@ -44,27 +48,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 180
-    defaults:
-      run:
-        working-directory: terraform
     steps:
       - uses: actions/checkout@v3
       # TODO use aws ssm
       - name: Generate SSH key
         run: ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_ed25519
-      - uses: hashicorp/setup-terraform@v2.0.3
-      - run: terraform init
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
           role-duration-seconds: 10800
           aws-region: us-east-2
+      - uses: hashicorp/setup-terraform@v2.0.3
+      - run: terraform init
+        working-directory: terraform
       - name: Find Mac OS dedicated host
         if: inputs.os == 'darwin'
+        working-directory: terraform
         run: |
           ./find-or-create-host.sh '${{ inputs.arch }}'
       - name: Set terraform variables
+        working-directory: terraform
         run: |
           cat <<EOF >> terraform.tfvars
           public_key_path = "~/.ssh/id_ed25519.pub"
@@ -78,8 +82,10 @@ jobs:
             echo "SSH_USER=ec2-user" >> $GITHUB_ENV
           fi
       - run: terraform apply -input=false -auto-approve
+        working-directory: terraform
         id: terraform-apply
       - id: public-ip
+        working-directory: terraform
         # setup-terraform saves stdout of terraform calls to outputs
         run: terraform output --raw public_ip
       - name: Wait for VM to be ready
@@ -92,6 +98,7 @@ jobs:
       - name: Build Envoy
         run: |
           ssh ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
+            set -e
             if [[ "${{ inputs.os }}" == darwin ]]; then
               export PATH="/opt/homebrew/bin:$PATH"
               export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=11.7 --host_copt=-mmacos-version-min=11.7"
@@ -110,7 +117,8 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}
-          path: terraform/envoy/
+          path: envoy/
           if-no-files-found: error
       - run: terraform destroy -input=false -auto-approve
+        working-directory: terraform
         if: always() && steps.terraform-apply.outcome != 'skipped'

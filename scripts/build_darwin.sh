@@ -19,7 +19,6 @@ BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS:-""}
 read -ra BAZEL_BUILD_EXTRA_OPTIONS <<< "${BAZEL_BUILD_EXTRA_OPTIONS}"
 BAZEL_BUILD_OPTIONS=(
     "--curses=no"
-    --show_task_finish
     --verbose_failures
     --//contrib/vcl/source:enabled=false
     "--action_env=PATH=/usr/local/bin:/opt/local/bin:/usr/bin:/bin:/opt/homebrew/bin"

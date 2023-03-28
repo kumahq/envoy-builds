@@ -5,9 +5,6 @@ BUILD_ENVOY_FROM_SOURCES ?= false
 ENVOY_TAG ?= v$(ENVOY_VERSION)
 ENVOY_ARTIFACT_EXT ?=
 
-ifeq ($(GOOS),linux)
-	ENVOY_DISTRO ?= alpine
-endif
 ENVOY_DISTRO ?= $(GOOS)
 
 ifeq ($(ENVOY_DISTRO),centos)
