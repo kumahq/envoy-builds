@@ -14,10 +14,10 @@ variable "arch" {
 
 variable "os" {
   type        = string
-  description = "linux or darwin"
+  description = "linux or darwin or windows"
   validation {
-    condition     = contains(["linux", "darwin"], var.os)
-    error_message = "linux or darwin"
+    condition     = contains(["linux", "darwin", "windows"], var.os)
+    error_message = "linux or darwin or windows"
   }
 }
 
@@ -25,6 +25,7 @@ locals {
   ami = {
     linux = data.aws_ssm_parameter.debian.value
     darwin = data.aws_ami.mac.image_id
+    windows = data.aws_ssm_parameter.windows.value
   }
   instance_type = {
     darwin = {
@@ -35,10 +36,15 @@ locals {
       amd64 = "t3.2xlarge"
       arm64 = "t4g.2xlarge"
     }
+    windows = {
+      amd64 = "t3.2xlarge"
+      arm64 = "t4g.2xlarge"
+    }
   }
   user_data = {
     linux = local.linux_user_data
     darwin = local.macos_user_data
+    windows = ""
   }
 }
 
@@ -129,4 +135,8 @@ EOF
 
 output "public_ip" {
   value = aws_instance.envoy-ci-build.public_ip
+}
+
+output "instance_id" {
+  value = aws_instance.envoy-ci-build.id
 }
