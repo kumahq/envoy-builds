@@ -39,11 +39,9 @@ jobs:
               chmod +x "${bin}"
 
               bin="$(basename "${bin}")"
-              IFS=- read -r envoy ver distro <<< "${bin}"
-              archive_name="envoy-${os}-${arch}-v${ver}"
-              if [[ "${distro}" != "${os}" ]]; then
-                archive_name="${archive_name}-${distro}"
-              fi
+              IFS=- read -r envoy suffix <<< "${bin}"
+              # We know the suffix begins with a version number
+              archive_name="envoy-${os}-${arch}-${suffix}"
 
               # move file into tar.gz and rename to 'envoy' in archive
               tar -C "${dir}" "--transform=flags=r;s|${bin}|envoy|" -czvf "out/${archive_name}.tar.gz" "${bin}"
