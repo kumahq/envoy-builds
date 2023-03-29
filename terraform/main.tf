@@ -33,12 +33,11 @@ locals {
       arm64 = "mac2.metal"
     }
     linux = {
-      amd64 = "t3.2xlarge"
-      arm64 = "t4g.2xlarge"
+      amd64 = "c6i.4xlarge"
+      arm64 = "c7g.4xlarge"
     }
     windows = {
-      amd64 = "t3.2xlarge"
-      arm64 = "t4g.2xlarge"
+      amd64 = "c6i.4xlarge"
     }
   }
   user_data = {
