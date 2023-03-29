@@ -26,3 +26,9 @@ git clone https://github.com/envoyproxy/envoy.git
 cd envoy
 TEMP=C: ./ci/run_envoy_docker.sh './ci/windows_ci_steps.sh'
 ```
+
+### Retrieving binary
+
+It's not possible to transfer files using SSM Session Manager directly. We can
+instead create a new Windows user, connect using RDP, share a directory and
+copy the binary into the shared directory.
