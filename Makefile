@@ -1,53 +1,33 @@
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 
-BUILD_ENVOY_FROM_SOURCES ?= false
-ENVOY_TAG ?= v$(ENVOY_VERSION)
-ENVOY_ARTIFACT_EXT ?=
-
-ENVOY_DISTRO ?= $(GOOS)
+ARTIFACT_EXT ?=
+BUILD_ENVOY_SCRIPT ?= scripts/build_$(GOOS).sh
 
 ifeq ($(ENVOY_DISTRO),centos)
-	BUILD_ENVOY_SCRIPT = scripts/build_centos.sh
+	ARTIFACT_EXT ?= -centos
+	BUILD_ENVOY_SCRIPT ?= scripts/build_centos.sh
 endif
-BUILD_ENVOY_SCRIPT ?= scripts/build_$(GOOS).sh
 
 SOURCE_DIR ?= ${TMPDIR}envoy-sources
 ifndef TMPDIR
 	SOURCE_DIR ?= /tmp/envoy-sources
 endif
 
-# Target 'build/envoy' allows to put Envoy binary under the build/artifacts-$GOOS-$GOARCH/envoy directory.
-# Depending on the flag BUILD_ENVOY_FROM_SOURCES this target either fetches Envoy from binary registry or
-# builds from sources. It's possible to build binaries for darwin, linux and centos by specifying GOOS
-# and ENVOY_DISTRO variables. Envoy version could be specified by ENVOY_TAG that accepts git tag or commit
-# hash values.
+.PHONY: build/envoy/fips
+build/envoy/fips:
+	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} --define boringssl=fips" \
+	ARTIFACT_EXT="+fips" $(MAKE) build/envoy
+
 .PHONY: build/envoy
 build/envoy:
-	GOOS=${GOOS} \
-	GOARCH=${GOARCH} \
-	ENVOY_DISTRO=${ENVOY_DISTRO} \
-	ENVOY_VERSION=${ENVOY_VERSION} \
-	$(MAKE) build/artifacts-${GOOS}-${GOARCH}/envoy/envoy-${ENVOY_VERSION}-${ENVOY_DISTRO}
-
-.PHONY: build/artifacts-linux-amd64/envoy/envoy
-build/artifacts-linux-amd64/envoy/envoy:
-	GOOS=linux GOARCH=amd64 $(MAKE) build/envoy
-
-.PHONY: build/artifacts-linux-arm64/envoy/envoy
-build/artifacts-linux-arm64/envoy/envoy:
-	GOOS=linux GOARCH=arm64 $(MAKE) build/envoy
-
-build/artifacts-${GOOS}-${GOARCH}/envoy/envoy-${ENVOY_VERSION}-${ENVOY_DISTRO}:
-	ENVOY_TAG=$(ENVOY_TAG) \
+	ENVOY_TAG=v$(ENVOY_VERSION) \
 	SOURCE_DIR=${SOURCE_DIR} \
-	KUMA_DIR=${KUMA_DIR} \
 	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS}" \
-	BINARY_PATH=$@ $(BUILD_ENVOY_SCRIPT)
+	BINARY_PATH=build/artifacts-${GOOS}-${GOARCH}/envoy/envoy-v${ENVOY_VERSION}$(ARTIFACT_EXT) $(BUILD_ENVOY_SCRIPT)
 
 .PHONY: clean/envoy
 clean/envoy:
 	rm -rf ${SOURCE_DIR}
 	rm -rf build/artifacts-${GOOS}-${GOARCH}/envoy/
 	rm -rf build/envoy/
-WORK_DIR ?= .
