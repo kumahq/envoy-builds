@@ -21,3 +21,10 @@ in a VM.
 
 The AWS IAM policy in `policy.json` is sufficient for running the `build.yaml`
 Github workflow.
+
+Run the `build-and-release.yaml` workflow to build binaries for linux/darwin
+amd64/arm64 and additionally a FIPS version for linux/amd64 and publish a _draft
+Github release_.
+
+The Windows binary currently needs to be manually built and uploaded to the
+release. See [`terraform/README.md`](terraform/README.md) for more information.
