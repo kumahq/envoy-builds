@@ -11,6 +11,8 @@ mkdir -p "$(dirname "${BINARY_PATH}")"
 SOURCE_DIR="${SOURCE_DIR}" "scripts/fetch_sources.sh"
 CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "scripts/contrib_enabled_matrix.py")
 
+PATCH_FILE=$(realpath "scripts/BUILD-darwin-arm64.patch")
+
 pushd "${SOURCE_DIR}"
 
 BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS:-""}
@@ -24,6 +26,12 @@ BAZEL_BUILD_OPTIONS=(
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
 
 read -ra CONTRIB_ENABLED_ARGS <<< "$(python "${CONTRIB_ENABLED_MATRIX_SCRIPT}")"
+
+bazel fetch '@local_config_cc//:toolchain'
+
+if [[ "$GOARCH" == "arm64" ]]; then
+    patch --forward "$(bazel info output_base)/external/local_config_cc/BUILD" "$PATCH_FILE"
+fi
 
 bazel build "${BAZEL_BUILD_OPTIONS[@]}" -c opt //contrib/exe:envoy-static "${CONTRIB_ENABLED_ARGS[@]}"
 
