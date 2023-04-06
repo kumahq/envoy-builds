@@ -1,12 +1,11 @@
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 
-ARTIFACT_EXT ?=
 BUILD_ENVOY_SCRIPT ?= scripts/build_$(GOOS).sh
 
 ifeq ($(ENVOY_DISTRO),centos)
 	ARTIFACT_EXT ?= -centos
-	BUILD_ENVOY_SCRIPT ?= scripts/build_centos.sh
+	BUILD_ENVOY_SCRIPT = scripts/build_centos.sh
 endif
 
 SOURCE_DIR ?= ${TMPDIR}envoy-sources
