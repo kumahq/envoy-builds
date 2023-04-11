@@ -53,6 +53,7 @@ provider "aws" {
 
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
+  version = "3.19.0"
 
   name = "envoy-ci-${var.os}-${var.arch}"
   cidr = "10.0.0.0/16"
@@ -64,6 +65,7 @@ module "vpc" {
 
 module "security_group" {
   source = "terraform-aws-modules/security-group/aws//modules/ssh"
+  version = "4.17.1"
 
   name   = "envoy-ci-ssh"
   vpc_id = module.vpc.vpc_id
