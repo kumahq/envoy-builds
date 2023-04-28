@@ -32,6 +32,6 @@ git reset --hard FETCH_HEAD
 
 echo "ENVOY_TAG=${ENVOY_TAG}"
 
-git apply "${PATCH_FILE}"
+git apply -v "${PATCH_FILE}"
 
 popd
