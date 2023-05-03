@@ -65,3 +65,7 @@ cp /envoy-docker-build/tmp/execroot/envoy/bazel-out/x64_windows-opt/bin/source/e
 ```
 
 On MacOS with the official Microsoft RDP client if we check "Redirect folders" and share a folder, it's located at `//tsclient/<Name of folder>`.
+
+### Release
+
+As of writing, the full name of the binary in the release tar should be simply `envoy`.
