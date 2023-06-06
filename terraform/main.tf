@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "4.67.0"
+    }
+  }
+}
+
 variable "public_key_path" {
   type        = string
   description = "Path to public key for creating a key pair"
@@ -53,7 +62,7 @@ provider "aws" {
 
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
-  version = "5.0.0"
+  version = "3.19.0"
 
   name = "envoy-ci-${var.os}-${var.arch}"
   cidr = "10.0.0.0/16"
