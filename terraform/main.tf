@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "4.67.0"
+    }
+  }
+}
+
 variable "public_key_path" {
   type        = string
   description = "Path to public key for creating a key pair"
