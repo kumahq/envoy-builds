@@ -4,17 +4,7 @@
 
 ### Create an instance
 
-Run:
-
-```bash
-terraform plan -out plan
-```
-
-After you confirm and validate that plan is correct, apply the plan:
-
-```bash
-terraform apply "plan"
-```
+Run `terraform apply`, confirm that the plan is correct and apply it.
 
 ### Logging in
 
