@@ -109,14 +109,11 @@ jobs:
             git clone "https://github.com/$REPO" && cd "${REPO#${{ github.repository_owner }}/}"
             git checkout ${{ github.sha }}
 
-            make build/envoy
-
             if [[
               "${{ inputs.os }}" == linux &&
               "${{ inputs.arch }}" == amd64
             ]]; then
-              ENVOY_DISTRO=centos make build/envoy &
-              make build/envoy/fips
+              ENVOY_DISTRO=centos make build/envoy
             fi
 
             mv build ..
