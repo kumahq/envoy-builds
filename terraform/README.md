@@ -2,6 +2,10 @@
 
 ## Windows
 
+### Create an instance
+
+Run `terraform apply`, confirm that the plan is correct and apply it.
+
 ### Logging in
 
 Use AWS SSM Session Manager to get access:
@@ -27,6 +31,7 @@ export PATH=$PATH:/c/bazel
 cd /c
 git clone https://github.com/envoyproxy/envoy.git
 cd envoy
+git checkout <ENVOY_VERSION> # Envoy's version e.g.: git checkout v1.26.0
 TEMP=C: ./ci/run_envoy_docker.sh './ci/windows_ci_steps.sh'
 ```
 
@@ -69,3 +74,11 @@ On MacOS with the official Microsoft RDP client if we check "Redirect folders" a
 ### Release
 
 As of writing, the full name of the binary in the release tar should be simply `envoy`.
+
+### Cleanup
+
+Remove all the resources:
+
+```
+terraform destroy
+```
