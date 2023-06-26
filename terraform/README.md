@@ -32,7 +32,7 @@ cd /c
 git clone https://github.com/envoyproxy/envoy.git
 cd envoy
 git checkout <ENVOY_VERSION> # Envoy's version e.g.: git checkout v1.26.0
-TEMP=C: ./ci/run_envoy_docker.sh './ci/windows_ci_steps.sh'
+TEMP=C: ./ci/run_envoy_docker.sh './ci/windows_ci_steps.sh //source/exe:envoy-static'
 ```
 
 ### Retrieving binary
