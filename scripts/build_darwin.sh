@@ -25,6 +25,7 @@ BAZEL_BUILD_OPTIONS=(
 
 read -ra CONTRIB_ENABLED_ARGS <<< "$(python "${CONTRIB_ENABLED_MATRIX_SCRIPT}")"
 
+rm -rf /usr/local/include/openssl
 bazel build "${BAZEL_BUILD_OPTIONS[@]}" -c opt //contrib/exe:envoy-static "${CONTRIB_ENABLED_ARGS[@]}"
 
 popd
