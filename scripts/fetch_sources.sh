@@ -10,8 +10,6 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-PATCH_FILE=$()
-
 # clone Envoy repo if not exists
 if [[ ! -d "${SOURCE_DIR}" ]]; then
   mkdir -p "${SOURCE_DIR}"
@@ -31,7 +29,5 @@ git fetch origin --depth=1 "${ENVOY_TAG}"
 git reset --hard FETCH_HEAD
 
 echo "ENVOY_TAG=${ENVOY_TAG}"
-
-git apply -v "${PATCH_FILE}"
 
 popd
