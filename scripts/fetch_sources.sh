@@ -10,7 +10,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-PATCH_FILE=$(realpath "scripts/dns_filter_resolver.h.patch")
+PATCH_FILE=$()
 
 # clone Envoy repo if not exists
 if [[ ! -d "${SOURCE_DIR}" ]]; then
