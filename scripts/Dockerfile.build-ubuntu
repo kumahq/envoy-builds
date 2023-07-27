@@ -3,13 +3,14 @@ FROM $ENVOY_BUILD_IMAGE
 
 ARG BUILD_CMD
 
-RUN groupadd --gid $(id -g) -f envoygroup \
-  && useradd -o --uid $(id -u) --gid $(id -g) --no-create-home --home-dir /build envoybuild \
+# since 1.27.0 python cannot use root for building envoy
+RUN groupadd --gid 777 -f envoygroup \
+  && useradd -o --uid 777 --gid 777 --no-create-home --home-dir /build envoybuild \
   && usermod -a -G pcap envoybuild \
   && mkdir /build /source \
-  && chown envoybuild:envoygroup /build /source
+  && chown -R envoybuild:envoygroup /build /source
 
-COPY . /envoy-sources/
+COPY --chown=envoybuild:envoygroup . /envoy-sources/
 
 RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources && bazel/setup_clang.sh /opt/llvm"
 RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources && $BUILD_CMD"
