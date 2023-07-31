@@ -32,7 +32,7 @@ git reset --hard FETCH_HEAD
 
 echo "ENVOY_TAG=${ENVOY_TAG}"
 
-if [[ "${GOOS}" == "darwin" && "${GOARCH}" == "amd64" ]]; then
+if [[ "${GOOS}" == "darwin" ]]; then
   git apply -v "${PATCH_FILE}"
 fi
 
