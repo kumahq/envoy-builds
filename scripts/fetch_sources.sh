@@ -10,7 +10,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-PATCH_FILE=$(realpath "luajit.patch.patch")
+PATCH_FILE=$(realpath "scripts/luajit.patch.patch")
 
 # clone Envoy repo if not exists
 if [[ ! -d "${SOURCE_DIR}" ]]; then
