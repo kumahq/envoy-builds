@@ -114,7 +114,7 @@ jobs:
             if [[
               "${{ inputs.os }}" == linux &&
               "${{ inputs.arch }}" == amd64
-            ]; then
+            ]]; then
               make build/envoy/fips
             fi
 
