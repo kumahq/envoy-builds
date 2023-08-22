@@ -116,6 +116,7 @@ jobs:
               "${{ inputs.arch }}" == amd64
             ]]; then
               make build/envoy/fips
+              make build/envoy/fips_glibc
             fi
 
             mv build ..

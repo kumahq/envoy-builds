@@ -14,6 +14,11 @@ ifndef TMPDIR
 	SOURCE_DIR ?= /tmp/envoy-sources
 endif
 
+.PHONY: build/envoy/fips_glibc
+build/envoy/fips_glibc:
+	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} --define boringssl=fips" \
+	ARTIFACT_EXT="+fips-glibc-2.37" $(MAKE) build/envoy
+
 .PHONY: build/envoy/fips
 build/envoy/fips:
 	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} --define boringssl=fips" \
