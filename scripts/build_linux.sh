@@ -6,7 +6,8 @@ set -o nounset
 
 echo "Building Envoy for Linux"
 
-mkdir -p "$(dirname "${BINARY_PATH}")"
+BINARY_DIR="$(dirname "${BINARY_PATH}")"
+mkdir -p "$BINARY_DIR"
 
 SOURCE_DIR="${SOURCE_DIR}" "scripts/fetch_sources.sh"
 CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "scripts/contrib_enabled_matrix.py")
@@ -40,3 +41,11 @@ docker build -t "${LOCAL_BUILD_IMAGE}" --progress=plain \
 id=$(docker create "${LOCAL_BUILD_IMAGE}")
 docker cp "$id":/envoy-sources/bazel-bin/contrib/exe/envoy "${BINARY_PATH}"
 docker rm -v "$id"
+
+# copy glibc, envoy and patch envoy interpreter
+if [[ $ARCH == "amd64" && $ARTIFACT_EXT == "+fips" ]]; then
+  curl --retry 3 -s --fail --location https://github.com/kumahq/envoy-builds/releases/download/v1.27.0/glibc-2.37-linux-amd64.tar.gz | tar -C "$(dirname "${BINARY_PATH}")" -xz
+  docker build --platform linux/amd64 -t envoy-builds-patchelf --progress=plain -f "scripts/Dockerfile.patchelf" "${BINARY_DIR}"
+  id=$(docker create --platform linux/amd64 envoy-builds-patchelf)
+  docker cp "$id":/envoy-alt "${BINARY_DIR}"/envoy-alt
+fi

@@ -1,0 +1,8 @@
+FROM ubuntu:jammy@sha256:0bced47fffa3361afa981854fcabcd4577cd43cebbb808cea2b1f33a3dd7f508
+
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y patchelf
+
+COPY /envoy /envoy-alt
+
+RUN patchelf --set-interpreter usr/glibc-compat/lib/ld-linux-x86-64.so.2 --set-rpath usr/glibc-compat/lib/ /envoy-alt
