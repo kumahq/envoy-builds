@@ -17,6 +17,7 @@ read -ra BAZEL_BUILD_EXTRA_OPTIONS <<< "${BAZEL_BUILD_EXTRA_OPTIONS}"
 BAZEL_BUILD_OPTIONS=(
     "--config=clang"
     "--verbose_failures"
+    "--experimental_ui_max_stdouterr_bytes=104857600"
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
 BUILD_TARGET=${BUILD_TARGET:-"//contrib/exe:envoy-static"}
 
