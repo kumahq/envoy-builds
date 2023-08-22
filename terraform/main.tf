@@ -25,7 +25,7 @@ locals {
   ami = {
     linux = data.aws_ssm_parameter.debian.value
     darwin = data.aws_ami.mac.image_id
-    windows = data.aws_ssm_parameter.windows.value
+    # windows = data.aws_ssm_parameter.windows.value
   }
   instance_type = {
     darwin = {
