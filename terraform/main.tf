@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "4.67.0"
+    }
+  }
+}
+
 variable "public_key_path" {
   type        = string
   description = "Path to public key for creating a key pair"
@@ -37,7 +46,7 @@ locals {
       arm64 = "c7g.4xlarge"
     }
     windows = {
-      amd64 = "c6i.4xlarge"
+      amd64 = "c6i.8xlarge"
     }
   }
   user_data = {
@@ -53,6 +62,7 @@ provider "aws" {
 
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
+  version = "3.19.0"
 
   name = "envoy-ci-${var.os}-${var.arch}"
   cidr = "10.0.0.0/16"
@@ -64,6 +74,7 @@ module "vpc" {
 
 module "security_group" {
   source = "terraform-aws-modules/security-group/aws//modules/ssh"
+  version = "4.17.1"
 
   name   = "envoy-ci-ssh"
   vpc_id = module.vpc.vpc_id

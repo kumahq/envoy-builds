@@ -17,6 +17,7 @@ esac
 
 export AWS_REGION=us-east-2
 hostID=$(aws ec2 describe-hosts \
+    --max-items 1 \
     --filter \
         Name=tag-key,Values=EnvoyCI \
         Name=instance-type,Values="$instance_type" \

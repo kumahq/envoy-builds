@@ -2,6 +2,10 @@
 
 ## Windows
 
+### Create an instance
+
+Run `terraform apply`, confirm that the plan is correct and apply it.
+
 ### Logging in
 
 Use AWS SSM Session Manager to get access:
@@ -27,7 +31,8 @@ export PATH=$PATH:/c/bazel
 cd /c
 git clone https://github.com/envoyproxy/envoy.git
 cd envoy
-TEMP=C: ./ci/run_envoy_docker.sh './ci/windows_ci_steps.sh'
+git checkout <ENVOY_VERSION> # Envoy's version e.g.: git checkout v1.26.0
+TEMP=C: ./ci/run_envoy_docker.sh './ci/windows_ci_steps.sh //source/exe:envoy-static'
 ```
 
 ### Retrieving binary
@@ -39,7 +44,9 @@ C:\envoy-docker-build\tmp\execroot\envoy\bazel-out\x64_windows-opt\bin\source\ex
 ```
 
 It's not possible to transfer files using SSM Session Manager directly. We can
-instead create a new Windows user:
+instead connect via RDP and transfer files.
+
+Let's create a new Windows user:
 
 ```powershell
 $password = Read-Host -AsSecureString
@@ -47,12 +54,31 @@ New-LocalUser -Name "Envoy" -Password $password
 Add-LocalGroupMember -Group "Remote Desktop Users" -Member "Envoy"
 ```
 
-and then connect using RDP, share a directory and copy the binary into the shared directory.
+forward a port to the remote RDP using Session Manager:
+
+```
+aws ssm start-session --target $(terraform output -raw instance_id) --document-name AWS-StartPortForwardingSession --parameters "localPortNumber=55678,portNumber=3389"
+```
+
+and then connect using RDP to the local port `55678` and share a directory. Finally we can copy the binary into the shared directory.
 
 For example, with `remmina`/`freerdp` on Linux we can share the directory
-`/home/mike/projects/kuma/build`, login with the `Envoy` user as created above
-and copy the file to the host:
+`/home/mike/projects/kuma/build` and copy the file to the host:
 
 ```
 cp /envoy-docker-build/tmp/execroot/envoy/bazel-out/x64_windows-opt/bin/source/exe/envoy-static.exe //tsclient/_home_mike_projects_kuma_build
+```
+
+On MacOS with the official Microsoft RDP client if we check "Redirect folders" and share a folder, it's located at `//tsclient/<Name of folder>`.
+
+### Release
+
+As of writing, the full name of the binary in the release tar should be simply `envoy`.
+
+### Cleanup
+
+Remove all the resources:
+
+```
+terraform destroy
 ```

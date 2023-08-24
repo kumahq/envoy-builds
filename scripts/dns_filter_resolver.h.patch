@@ -1,0 +1,30 @@
+diff --git a/source/extensions/filters/udp/dns_filter/dns_filter_resolver.h b/source/extensions/filters/udp/dns_filter/dns_filter_resolver.h
+index 4dbd364b59..49b6d90e5f 100644
+--- a/source/extensions/filters/udp/dns_filter/dns_filter_resolver.h
++++ b/source/extensions/filters/udp/dns_filter/dns_filter_resolver.h
+@@ -24,9 +24,9 @@ public:
+                     const envoy::config::core::v3::TypedExtensionConfig& typed_dns_resolver_config,
+                     const Network::DnsResolverFactory& dns_resolver_factory, Api::Api& api)
+       : timeout_(timeout), dispatcher_(dispatcher),
++        callback_(callback), max_pending_lookups_(max_pending_lookups),
+         resolver_(
+-            dns_resolver_factory.createDnsResolver(dispatcher, api, typed_dns_resolver_config)),
+-        callback_(callback), max_pending_lookups_(max_pending_lookups) {}
++            dns_resolver_factory.createDnsResolver(dispatcher, api, typed_dns_resolver_config)) {}
+   /**
+    * @brief entry point to resolve the name in a DnsQueryRecord
+    *
+@@ -66,10 +66,12 @@ private:
+
+   std::chrono::milliseconds timeout_;
+   Event::Dispatcher& dispatcher_;
+-  const Network::DnsResolverSharedPtr resolver_;
+   DnsFilterResolverCallback& callback_;
+   absl::flat_hash_map<const DnsQueryRecord*, LookupContext> lookups_;
+   uint64_t max_pending_lookups_;
++
++  // we need resolver_'s destructor to run first, because DnsFilterResolver has callback that's using lookups_
++  const Network::DnsResolverSharedPtr resolver_;
+ };
+
+ using DnsFilterResolverPtr = std::unique_ptr<DnsFilterResolver>;
