@@ -28,3 +28,54 @@ Github release_.
 
 The Windows binary currently needs to be manually built and uploaded to the
 release. See [`terraform/README.md`](terraform/README.md) for more information.
+
+## Bundling with a custom glibc
+
+Some OS-es (CentOS 7, RHEL 8.8) have older versions of glibc that won't work with Envoy,
+and will result in errors similar to this one:
+
+```bash
+./envoy: /lib64/libm.so.6: version `GLIBC_2.29' not found (required by ./envoy)
+```
+
+In order to run Envoy on these OSes you need to either upgrade glibc (which is not always possible or convenient)
+or build a newer version of glibc manually and patch the Envoy binary to use the newer version.
+
+We pre-built glibc 2.37 for Linux AMD64 and you can download it [here](https://github.com/kumahq/envoy-builds/releases/download/v1.27.0/glibc-2.37-linux-amd64.tar.gz).
+
+Below are instructions on how to run Envoy with a custom glibc:
+1. [Download](https://github.com/kumahq/envoy-builds/releases/download/v1.27.0/glibc-2.37-linux-amd64.tar.gz) or [build](https://ftp.gnu.org/gnu/glibc/) glibc yourself (this can also be done using [docker](https://github.com/sgerrand/docker-glibc-builder) as well).
+2. Place the Envoy binary next to the "usr" folder and `cd` into it, so running `ls` it looks like this:
+```shell
+# ls
+envoy     readme.md src       usr
+```
+3. Use `patchelf` to patch the binary:
+   1. Installed by package manage (e.g. `apt-get install patchelf`)
+```shell
+patchelf --set-interpreter usr/glibc-compat/lib/ld-linux-x86-64.so.2 --set-rpath usr/glibc-compat/lib/ envoy
+```
+   2. Using docker
+```shell
+docker run -v .:/envoy -w /envoy --platform linux/amd64 -it onedata/patchelf:0.9 --set-interpreter usr/glibc-compat/lib/ld-linux-x86-64.so.2 --set-rpath usr/glibc-compat/lib/ envoy
+```
+
+4. Run `envoy` to verify the process
+
+```shell
+./envoy --version                                                                                                                                                                                                                           -- INSERT --
+
+./envoy  version: ea9d25e93cef74b023c95ca1a3f79449cdf7fa9a/1.26.3/Modified/RELEASE/BoringSSL
+```
+
+5. Run `ldd` to check the patching worked
+
+```shell
+ldd ./envoy
+        libm.so.6 => usr/glibc-compat/lib/libm.so.6 (0x0000004006ac9000)
+        librt.so.1 => usr/glibc-compat/lib/librt.so.1 (0x0000004006ba9000)
+        libdl.so.2 => usr/glibc-compat/lib/libdl.so.2 (0x0000004006bae000)
+        libpthread.so.0 => usr/glibc-compat/lib/libpthread.so.0 (0x0000004006bb4000)
+        libc.so.6 => usr/glibc-compat/lib/libc.so.6 (0x0000004006bb9000)
+        usr/glibc-compat/lib/ld-linux-x86-64.so.2 => /lib64/ld-linux-x86-64.so.2 (0x0000004000000000)
+```
