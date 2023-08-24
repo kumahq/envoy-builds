@@ -56,11 +56,14 @@ Below are instructions on how to run Envoy with a custom glibc:
 envoy     readme.md src       usr
 ```
 3. Use `patchelf` to patch the binary:
-   1. Installed by package manage (e.g. `apt-get install patchelf`)
+
+3.1. Installed by package manage (e.g. `apt-get install patchelf`)
+
 ```shell
 patchelf --set-interpreter usr/glibc-compat/lib/ld-linux-x86-64.so.2 --set-rpath usr/glibc-compat/lib/ envoy
 ```
-   2. Using docker
+
+3.2. Using docker
 ```shell
 docker run -v .:/envoy -w /envoy --platform linux/amd64 -it onedata/patchelf:0.9 --set-interpreter usr/glibc-compat/lib/ld-linux-x86-64.so.2 --set-rpath usr/glibc-compat/lib/ envoy
 ```
