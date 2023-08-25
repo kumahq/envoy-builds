@@ -55,7 +55,7 @@ Below are instructions on how to run Envoy with a custom glibc:
 # ls
 envoy     readme.md src       usr
 ```
-3. Use `patchelf` to patch the binary:
+3. Use `patchelf` to patch the binary (the path is relative, you can use an absolute path if you need to):
 
 3.1. Installed by package manage (e.g. `apt-get install patchelf`)
 
