@@ -91,13 +91,13 @@ jobs:
       - name: Wait for VM to be ready
         timeout-minutes: 20
         run: |
-          while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
+          while ! timeout 10 ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
           do
             sleep 5
           done
       - name: Build Envoy
         run: |
-          ssh ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
+          ssh -i ~/.ssh/id_ed25519 ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
             set -e
             if [[ "${{ inputs.os }}" == darwin ]]; then
               export PATH="/opt/homebrew/bin:$PATH"
@@ -123,7 +123,7 @@ jobs:
       - name: Download Envoy binaries
         run: |
           envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
-          scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
+          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
       - uses: actions/upload-artifact@v3
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}
