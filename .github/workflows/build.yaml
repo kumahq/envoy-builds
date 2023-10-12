@@ -89,9 +89,9 @@ jobs:
         # setup-terraform saves stdout of terraform calls to outputs
         run: terraform output --raw public_ip
       - name: Wait for VM to be ready
-        timeout-minutes: 20
+        timeout-minutes: 50
         run: |
-          while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
+          while ! timeout 10 ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
           do
             sleep 5
           done
