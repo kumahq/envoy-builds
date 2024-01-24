@@ -101,7 +101,7 @@ jobs:
             set -e
             if [[ "${{ inputs.os }}" == darwin ]]; then
               export PATH="/opt/homebrew/bin:$PATH"
-              export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=11.7 --host_copt=-mmacos-version-min=11.7"
+              export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.0 --host_copt=-mmacos-version-min=12.0"
             fi
 
             export ENVOY_VERSION="${{ inputs.version }}"
