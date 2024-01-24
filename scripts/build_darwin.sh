@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 set -o pipefail
@@ -23,7 +23,7 @@ BAZEL_BUILD_OPTIONS=(
     "--define" "wasm=disabled"
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
 
-read -ra CONTRIB_ENABLED_ARGS <<< "$(python "${CONTRIB_ENABLED_MATRIX_SCRIPT}")"
+read -ra CONTRIB_ENABLED_ARGS <<< "$(python3 "${CONTRIB_ENABLED_MATRIX_SCRIPT}")"
 
 rm -rf /usr/local/include/openssl
 bazel build "${BAZEL_BUILD_OPTIONS[@]}" -c opt //contrib/exe:envoy-static "${CONTRIB_ENABLED_ARGS[@]}"
