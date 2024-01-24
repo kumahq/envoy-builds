@@ -25,7 +25,7 @@ data "aws_ami" "mac" {
   filter {
     name = "name"
     values = [
-      "amzn-ec2-macos-11.*.*-*-*"
+      "amzn-ec2-macos-12.*.*-*-*"
     ]
   }
   filter {

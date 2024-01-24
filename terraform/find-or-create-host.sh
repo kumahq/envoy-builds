@@ -33,9 +33,11 @@ if [[ $hostID == "" ]]; then
         --tag-specifications 'ResourceType=dedicated-host,Tags=[{Key=EnvoyCI,Value=true}]' | \
         jq -r .HostIds[0]
     )
-fi 
+fi
 echo "Creating terraform.tfvars with host $hostID"
 
-cat <<EOF > terraform.tfvars
+sed -i '' -e '/host_id/d' terraform.tfvars 2>/dev/null || true
+
+cat <<EOF >> terraform.tfvars
 host_id = "$hostID"
 EOF
