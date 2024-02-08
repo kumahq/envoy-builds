@@ -1,0 +1,12 @@
+diff --git a/bazel/foreign_cc/luajit.patch b/bazel/foreign_cc/luajit.patch
+index 98fc8f6ded..6f592cc076 100644
+--- a/bazel/foreign_cc/luajit.patch
++++ b/bazel/foreign_cc/luajit.patch
+@@ -155,6 +155,7 @@ index 00000000..1201542c
+ +    os.environ["TARGET_LDFLAGS"] = os.environ.get("CFLAGS", "") + " -fno-function-sections -fno-data-sections"
+ +    os.environ["CFLAGS"] = ""
+ +    os.environ["LDFLAGS"] = ""
+++    os.environ["MAKE"] = "/usr/bin/make"
+ +
+ +    # Don't strip the binary - it doesn't work when cross-compiling, and we don't use it anyway.
+ +    os.environ["TARGET_STRIP"] = "@echo"

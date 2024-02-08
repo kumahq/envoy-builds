@@ -30,6 +30,11 @@ variable "os" {
   }
 }
 
+variable "fips" {
+  description = "fips build"
+  type   = bool
+}
+
 locals {
   ami = {
     linux = data.aws_ssm_parameter.debian.value
@@ -42,8 +47,8 @@ locals {
       arm64 = "mac2.metal"
     }
     linux = {
-      amd64 = "c6i.4xlarge"
-      arm64 = "c7g.4xlarge"
+      amd64 = "c6i.8xlarge"
+      arm64 = "c7g.8xlarge"
     }
     windows = {
       amd64 = "c6i.8xlarge"
@@ -64,7 +69,7 @@ module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
   version = "3.19.0"
 
-  name = "envoy-ci-${var.os}-${var.arch}"
+  name = "envoy-ci-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
   cidr = "10.0.0.0/16"
 
   azs             = ["us-east-2b"]
@@ -83,7 +88,7 @@ module "security_group" {
 }
 
 resource "aws_key_pair" "ci" {
-  key_name   = "envoy-ci-${var.os}-${var.arch}"
+  key_name   = "envoy-ci-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
   public_key = trimspace(file(var.public_key_path))
 }
 
@@ -97,7 +102,7 @@ resource "aws_instance" "envoy-ci-build" {
   key_name = aws_key_pair.ci.id
 
   tags = {
-    Name = "envoy-ci-${var.os}-${var.arch}"
+    Name = "envoy-ci-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
   }
 
   root_block_device {
@@ -117,11 +122,11 @@ resource "aws_instance" "envoy-ci-build" {
 resource "aws_iam_instance_profile" "envoy-ci-build" {
   role = aws_iam_role.role.name
 
-  name = "envoy-ci-build-${var.os}-${var.arch}"
+  name = "envoy-ci-build-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
 }
 
 resource "aws_iam_role" "role" {
-  name = "envoy-ci-build-${var.os}-${var.arch}"
+  name = "envoy-ci-build-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
   path = "/"
 
   assume_role_policy = <<EOF

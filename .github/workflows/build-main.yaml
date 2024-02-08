@@ -1,12 +1,9 @@
-name: Build and release
+name: Build main on Schedule
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Envoy version to build (don't include leading v)
-        type: string
-        required: true
+  workflow_dispatch: {}
+  schedule:
+    - cron: 0 6 * * 1
 
 permissions:
   id-token: write
@@ -17,7 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [darwin, linux]
-        arch: [arm64, amd64]
+        arch: [amd64, arm64]
         fips: [false, true]
     uses: ./.github/workflows/build.yaml
     secrets:
@@ -25,7 +22,8 @@ jobs:
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
-      version: ${{ inputs.version }}
+      fips: ${{ matrix.fips }}
+      version: "main"
   package:
     runs-on: ubuntu-latest
     needs: build
@@ -48,10 +46,3 @@ jobs:
               tar -C "${dir}" "--transform=flags=r;s|${bin}|envoy|" -czvf "out/${archive_name}.tar.gz" "${bin}"
             done
           done
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ inputs.version }}
-          draft: true
-          files: |
-            out/*

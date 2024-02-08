@@ -1,6 +1,6 @@
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
-
+ENVOY_BUILD_TAG := main
 BUILD_ENVOY_SCRIPT ?= scripts/build_$(GOOS).sh
 
 ifeq ($(ENVOY_DISTRO),centos)
@@ -13,6 +13,10 @@ ifndef TMPDIR
 	SOURCE_DIR ?= /tmp/envoy-sources
 endif
 
+ifneq ($(ENVOY_VERSION),main)
+    ENVOY_BUILD_TAG=v$(ENVOY_VERSION)
+endif
+
 .PHONY: build/envoy/fips
 build/envoy/fips:
 	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} --define boringssl=fips" \
@@ -20,10 +24,12 @@ build/envoy/fips:
 
 .PHONY: build/envoy
 build/envoy:
-	ENVOY_TAG=v$(ENVOY_VERSION) \
+	ENVOY_TAG=$(ENVOY_BUILD_TAG) \
 	SOURCE_DIR=${SOURCE_DIR} \
+	GOARCH=${GOARCH} \
+	GOOS=${GOOS} \
 	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS}" \
-	BINARY_PATH=build/artifacts-${GOOS}-${GOARCH}/envoy/envoy-v${ENVOY_VERSION}$(ARTIFACT_EXT) $(BUILD_ENVOY_SCRIPT)
+	BINARY_PATH=build/artifacts-${GOOS}-${GOARCH}/envoy/envoy-${ENVOY_BUILD_TAG}$(ARTIFACT_EXT) $(BUILD_ENVOY_SCRIPT)
 
 .PHONY: clean/envoy
 clean/envoy:
