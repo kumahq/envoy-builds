@@ -16,7 +16,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
-          role-duration-seconds: 14400
+          role-duration-seconds: 600
           aws-region: us-east-2
       - name: Release MacOS available hosts
         working-directory: terraform
