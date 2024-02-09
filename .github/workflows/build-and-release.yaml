@@ -21,7 +21,7 @@ jobs:
         os: [linux]
         arch: [amd64]
         fips: [false, true]
-    uses: ./.github/workflows/build.yaml@testing-build
+    uses: ./.github/workflows/build.yaml
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
     with:
