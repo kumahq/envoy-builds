@@ -10,7 +10,13 @@ hostIDs=$(aws ec2 describe-hosts \
 )
 
 arr=(${hostIDs//$'\n'/ })
+code=0
 for value in "${arr[@]}"
 do
-  aws ec2 release-hosts --host-ids=$value --no-cli-pager
+  hostCleaned=$(aws ec2 release-hosts --host-ids=$value --no-cli-pager | jq -r '.Unsuccessful == []')
+  if [[ hostCleaned != true ]]; then
+    code=1
+  fi
 done
+
+exit $code
