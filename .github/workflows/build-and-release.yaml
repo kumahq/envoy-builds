@@ -18,8 +18,8 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [darwin, linux]
-        arch: [arm64, amd64]
+        os: [linux]
+        arch: [amd64]
         fips: [false, true]
     uses: ./.github/workflows/build.yaml
     secrets:
@@ -50,10 +50,3 @@ jobs:
               tar -C "${dir}" "--transform=flags=r;s|${bin}|envoy|" -czvf "out/${archive_name}.tar.gz" "${bin}"
             done
           done
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ inputs.version }}
-          draft: true
-          files: |
-            out/*
