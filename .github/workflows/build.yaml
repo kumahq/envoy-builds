@@ -15,6 +15,11 @@ on:
         description: OS to build Envoy for
         type: string
         required: true
+      fips:
+        description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
     secrets:
       AWS_ACCOUNT_ID:
         description: AWS account ID for infrastructure
@@ -39,7 +44,11 @@ on:
         description: OS to build Envoy for
         type: choice
         required: true
-
+      fips:
+        description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
 permissions:
   id-token: write
   contents: read
@@ -47,7 +56,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    if: inputs.fips == false || ( inputs.fips && inputs.os == 'linux' && inputs.arch == 'amd64')
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v3
       # TODO use aws ssm
@@ -57,7 +67,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
-          role-duration-seconds: 10800
+          role-duration-seconds: 14400
           aws-region: us-east-2
       - uses: hashicorp/setup-terraform@v2.0.3
       - run: terraform init
@@ -74,6 +84,7 @@ jobs:
           public_key_path = "~/.ssh/id_ed25519.pub"
           arch = "${{ inputs.arch }}"
           os = "${{ inputs.os }}"
+          fips = ${{ inputs.fips }}
           EOF
 
           if [[ "${{ inputs.os }}" == linux ]]; then
@@ -101,7 +112,7 @@ jobs:
             set -e
             if [[ "${{ inputs.os }}" == darwin ]]; then
               export PATH="/opt/homebrew/bin:$PATH"
-              export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=11.7 --host_copt=-mmacos-version-min=11.7"
+              export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
             fi
 
             export ENVOY_VERSION="${{ inputs.version }}"
@@ -109,13 +120,10 @@ jobs:
             git clone "https://github.com/$REPO" && cd "${REPO#${{ github.repository_owner }}/}"
             git checkout ${{ github.sha }}
 
-            make build/envoy
-
-            if [[
-              "${{ inputs.os }}" == linux &&
-              "${{ inputs.arch }}" == amd64
-            ]]; then
+            if [[ ${{ inputs.fips }} == true ]]; then
               make build/envoy/fips
+            else
+              make build/envoy
             fi
 
             mv build ..

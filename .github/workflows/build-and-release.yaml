@@ -7,6 +7,8 @@ on:
         description: Envoy version to build (don't include leading v)
         type: string
         required: true
+  schedule:
+    - cron: 0 6 * * 1
 
 permissions:
   id-token: write
@@ -18,13 +20,14 @@ jobs:
       matrix:
         os: [darwin, linux]
         arch: [arm64, amd64]
+        fips: [false, true]
     uses: ./.github/workflows/build.yaml
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
-      version: ${{ inputs.version }}
+      version: ${{ inputs.version || 'main' }}
   package:
     runs-on: ubuntu-latest
     needs: build

@@ -12,9 +12,8 @@ set -e
 pip3 install virtualenv
 
 sudo -u ec2-user -i <<SUDOEOF
-echo "alias python=python3" >> ~/.bash_profile
 # Using && is apparently necessary to ensure touch runs. Do not modify without testing!
-brew install automake cmake coreutils libtool wget ninja go && brew reinstall --force bazelisk && touch ~/ready
+brew install bash automake cmake coreutils libtool wget ninja go && brew reinstall --force bazelisk && touch ~/ready
 SUDOEOF
 EOF
 }
@@ -25,7 +24,7 @@ data "aws_ami" "mac" {
   filter {
     name = "name"
     values = [
-      "amzn-ec2-macos-11.*.*-*-*"
+      "amzn-ec2-macos-12.*.*-*-*"
     ]
   }
   filter {
