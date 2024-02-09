@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: 0 10 * * *
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   release_hosts:
     runs-on: ubuntu-latest
