@@ -27,6 +27,7 @@ jobs:
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
+      fips: ${{ matrix.fips }}
       version: ${{ inputs.version || 'main' }}
   package:
     runs-on: ubuntu-latest
