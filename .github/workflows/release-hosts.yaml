@@ -5,10 +5,14 @@ on:
   schedule:
     - cron: 0 10 * * *
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   release_hosts:
-    secrets:
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
       # TODO use aws ssm
@@ -16,7 +20,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
-          role-duration-seconds: 600
+          role-duration-seconds: 900
           aws-region: us-east-2
       - name: Release MacOS available hosts
         working-directory: terraform
