@@ -65,16 +65,16 @@ provider "aws" {
   region = "us-east-2"
 }
 
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-  version = "3.19.0"
+data "aws_vpc" "exisiting_vpc" {
+  filter {
+    name   = "tag:Name"
+    values = ["envoy-ci"]
+  }
+}
 
-  name = "envoy-ci-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
-  cidr = "10.0.0.0/16"
-
-  azs             = ["us-east-2b"]
-  private_subnets = []
-  public_subnets  = ["10.0.101.0/24"]
+data "aws_subnet" "exisiting_subnet" {
+  vpc_id            = data.aws_vpc.exisiting_vpc.id
+  availability_zone = "us-east-2b"
 }
 
 module "security_group" {
@@ -82,7 +82,7 @@ module "security_group" {
   version = "4.17.1"
 
   name   = "envoy-ci-ssh"
-  vpc_id = module.vpc.vpc_id
+  vpc_id = data.aws_vpc.exisiting_vpc.id
 
   ingress_cidr_blocks = ["0.0.0.0/0"]
 }
@@ -109,7 +109,7 @@ resource "aws_instance" "envoy-ci-build" {
     volume_size = "100"
   }
 
-  subnet_id              = module.vpc.public_subnets[0]
+  subnet_id              = data.aws_subnet.exisiting_subnet.id
   vpc_security_group_ids = [module.security_group.security_group_id]
 
   user_data = local.user_data[var.os]
