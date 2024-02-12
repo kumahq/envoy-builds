@@ -35,6 +35,22 @@ variable "fips" {
   type   = bool
 }
 
+provider "aws" {
+  region = "us-east-2"
+}
+
+data "aws_vpc" "exisiting_vpc" {
+  filter {
+    name   = "tag:Name"
+    values = ["envoy-ci"]
+  }
+}
+
+data "aws_subnet" "exisiting_subnet" {
+  vpc_id            = data.aws_vpc.exisiting_vpc.id
+  availability_zone = "us-east-2b"
+}
+
 locals {
   ami = {
     linux = data.aws_ssm_parameter.debian.value
@@ -59,22 +75,20 @@ locals {
     darwin = local.macos_user_data
     windows = ""
   }
+  create_vpc = data.aws_vpc.exisiting_vpc.id != "" ? false : true
 }
 
-provider "aws" {
-  region = "us-east-2"
-}
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+  version = "3.19.0"
 
-data "aws_vpc" "exisiting_vpc" {
-  filter {
-    name   = "tag:Name"
-    values = ["envoy-ci"]
-  }
-}
+  name = "envoy-ci"
+  cidr = "10.0.0.0/16"
 
-data "aws_subnet" "exisiting_subnet" {
-  vpc_id            = data.aws_vpc.exisiting_vpc.id
-  availability_zone = "us-east-2b"
+  azs             = ["us-east-2b"]
+  private_subnets = []
+  public_subnets  = ["10.0.101.0/24"]
+  create_vpc      = local.create_vpc
 }
 
 module "security_group" {
@@ -82,7 +96,7 @@ module "security_group" {
   version = "4.17.1"
 
   name   = "envoy-ci-ssh"
-  vpc_id = data.aws_vpc.exisiting_vpc.id
+  vpc_id = local.create_vpc ? module.vpc.vpc_id : data.aws_vpc.exisiting_vpc.id
 
   ingress_cidr_blocks = ["0.0.0.0/0"]
 }
@@ -109,7 +123,7 @@ resource "aws_instance" "envoy-ci-build" {
     volume_size = "100"
   }
 
-  subnet_id              = data.aws_subnet.exisiting_subnet.id
+  subnet_id              = local.create_vpc ? module.vpc.public_subnets[0] : data.aws_subnet.exisiting_subnet.id
   vpc_security_group_ids = [module.security_group.security_group_id]
 
   user_data = local.user_data[var.os]
