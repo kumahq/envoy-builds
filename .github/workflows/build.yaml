@@ -15,6 +15,11 @@ on:
         description: OS to build Envoy for
         type: string
         required: true
+      fips:
+        description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
     secrets:
       AWS_ACCOUNT_ID:
         description: AWS account ID for infrastructure
@@ -39,6 +44,11 @@ on:
         description: OS to build Envoy for
         type: choice
         required: true
+      fips:
+        description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -47,19 +57,20 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: inputs.fips == false || ( inputs.fips && inputs.os == 'linux' && inputs.arch == 'amd64')
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # TODO use aws ssm
       - name: Generate SSH key
         run: ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_ed25519
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
           role-duration-seconds: 14400
           aws-region: us-east-2
-      - uses: hashicorp/setup-terraform@v2.0.3
+      - uses: hashicorp/setup-terraform@v3.0.0
       - run: terraform init
         working-directory: terraform
       - name: Find Mac OS dedicated host
@@ -74,6 +85,8 @@ jobs:
           public_key_path = "~/.ssh/id_ed25519.pub"
           arch = "${{ inputs.arch }}"
           os = "${{ inputs.os }}"
+          fips = ${{ inputs.fips }}
+          envoy_version = "${{ inputs.version }}"
           EOF
 
           if [[ "${{ inputs.os }}" == linux ]]; then
@@ -109,13 +122,10 @@ jobs:
             git clone "https://github.com/$REPO" && cd "${REPO#${{ github.repository_owner }}/}"
             git checkout ${{ github.sha }}
 
-            make build/envoy
-
-            if [[
-              "${{ inputs.os }}" == linux &&
-              "${{ inputs.arch }}" == amd64
-            ]]; then
+            if [[ ${{ inputs.fips }} == true ]]; then
               make build/envoy/fips
+            else
+              make build/envoy
             fi
 
             mv build ..
@@ -124,9 +134,9 @@ jobs:
         run: |
           envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
           scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: envoy-${{ inputs.os }}-${{ inputs.arch }}
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.fips }}
           path: envoy/
           if-no-files-found: error
       - run: terraform destroy -input=false -auto-approve

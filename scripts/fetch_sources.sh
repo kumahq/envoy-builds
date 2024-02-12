@@ -11,7 +11,6 @@ set -o pipefail
 set -o nounset
 
 PATCH_FILE=$(realpath "scripts/luajit.patch.patch")
-PATCH_FILE_2=$(realpath "scripts/cel-cpp.patch.patch")
 
 # clone Envoy repo if not exists
 if [[ ! -d "${SOURCE_DIR}" ]]; then
@@ -35,7 +34,6 @@ echo "ENVOY_TAG=${ENVOY_TAG}"
 
 if [[ "${GOOS}" == "darwin" ]]; then
   git apply -v "${PATCH_FILE}"
-  git apply -v "${PATCH_FILE_2}"
 fi
 
 popd
