@@ -18,9 +18,9 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [darwin, linux]
-        arch: [arm64, amd64]
-        fips: [false, true]
+        os: [linux]
+        arch: [amd64]
+        fips: [false]
     uses: ./.github/workflows/build.yaml
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -51,10 +51,10 @@ jobs:
               tar -C "${dir}" "--transform=flags=r;s|${bin}|envoy|" -czvf "out/${archive_name}.tar.gz" "${bin}"
             done
           done
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ inputs.version }}
-          draft: true
-          files: |
-            out/*
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     tag_name: v${{ inputs.version }}
+      #     draft: true
+      #     files: |
+      #       out/*

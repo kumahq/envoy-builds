@@ -71,12 +71,6 @@ jobs:
           aws-region: us-east-2
       - uses: hashicorp/setup-terraform@v3.0.0
       - run: terraform init
-        working-directory: terraform/vpc
-      - name: Create VPC
-        run: terraform apply -input=false -auto-approve
-        working-directory: terraform/vpc
-        id: terraform-apply
-      - run: terraform init
         working-directory: terraform
       - name: Find Mac OS dedicated host
         if: inputs.os == 'darwin'
