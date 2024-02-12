@@ -132,7 +132,7 @@ jobs:
         run: |
           envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
           scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}
           path: envoy/
