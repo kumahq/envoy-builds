@@ -85,6 +85,7 @@ jobs:
           arch = "${{ inputs.arch }}"
           os = "${{ inputs.os }}"
           fips = ${{ inputs.fips }}
+          envoy_version = "${{ inputs.version }}"
           EOF
 
           if [[ "${{ inputs.os }}" == linux ]]; then
@@ -134,7 +135,7 @@ jobs:
           scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
       - uses: actions/upload-artifact@v4
         with:
-          name: envoy-${{ inputs.os }}-${{ inputs.arch }}
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.fips }}
           path: envoy/
           if-no-files-found: error
       - run: terraform destroy -input=false -auto-approve
