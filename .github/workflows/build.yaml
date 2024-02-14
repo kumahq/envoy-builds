@@ -150,6 +150,7 @@ jobs:
             mv build ..
           EOF
       - name: Build Envoy Windows
+        working-directory: terraform
         if: inputs.os == 'windows'
         run: |
           if [[ ${{ inputs.version }} == main ]]; then
