@@ -21,6 +21,7 @@ jobs:
         os: [darwin, linux]
         arch: [arm64, amd64]
         fips: [false, true]
+      fail-fast: false
     uses: ./.github/workflows/build.yaml
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -38,7 +39,7 @@ jobs:
       - run: |
           mkdir out
           for dir in envoy*; do
-            IFS=- read -r envoy os arch <<< "${dir}"
+            IFS=- read -r envoy os arch fips <<< "${dir}"
             for bin in "${dir}"/*; do
               chmod +x "${bin}"
 

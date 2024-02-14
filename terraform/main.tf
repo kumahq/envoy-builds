@@ -35,6 +35,12 @@ variable "fips" {
   type   = bool
 }
 
+variable "envoy_version" {
+  type        = string
+  description = "Envoy version"
+  default     = "main"
+}
+
 locals {
   ami = {
     linux = data.aws_ssm_parameter.debian.value
@@ -47,8 +53,8 @@ locals {
       arm64 = "mac2.metal"
     }
     linux = {
-      amd64 = "c6i.8xlarge"
-      arm64 = "c7g.8xlarge"
+      amd64 = "c6i.4xlarge"
+      arm64 = "c7g.4xlarge"
     }
     windows = {
       amd64 = "c6i.8xlarge"
@@ -88,7 +94,7 @@ module "security_group" {
 }
 
 resource "aws_key_pair" "ci" {
-  key_name   = "envoy-ci-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
+  key_name = "envoy-ci-${var.os}-${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
   public_key = trimspace(file(var.public_key_path))
 }
 
@@ -102,14 +108,14 @@ resource "aws_instance" "envoy-ci-build" {
   key_name = aws_key_pair.ci.id
 
   tags = {
-    Name = "envoy-ci-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
+    Name = "envoy-ci-${var.os}-${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
   }
 
   root_block_device {
     volume_size = "100"
   }
 
-  subnet_id              = data.aws_subnet.exisiting_subnet.id
+  subnet_id = data.aws_subnet.exisiting_subnet.id
   vpc_security_group_ids = [module.security_group.security_group_id]
 
   user_data = local.user_data[var.os]
@@ -122,11 +128,11 @@ resource "aws_instance" "envoy-ci-build" {
 resource "aws_iam_instance_profile" "envoy-ci-build" {
   role = aws_iam_role.role.name
 
-  name = "envoy-ci-build-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
+  name = "envoy-ci-build-${var.os}-${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
 }
 
 resource "aws_iam_role" "role" {
-  name = "envoy-ci-build-${var.os}-${var.arch}${var.fips ? "-fips" : ""}"
+  name = "envoy-ci-build-${var.os}-${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
   path = "/"
 
   assume_role_policy = <<EOF
