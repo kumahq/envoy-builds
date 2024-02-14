@@ -158,6 +158,7 @@ jobs:
           else
             version=v${{ inputs.version }}
           fi
+          sleep 300
           command_id=$(aws ssm send-command \
             --instance-id ${{ steps.instance-id.outputs.stdout }} \
             --document-name "AWS-RunPowerShellScript" \
