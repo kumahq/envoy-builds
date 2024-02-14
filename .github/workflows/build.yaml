@@ -101,14 +101,19 @@ jobs:
         working-directory: terraform
         # setup-terraform saves stdout of terraform calls to outputs
         run: terraform output --raw public_ip
+      - id: instance-id
+        working-directory: terraform
+        # setup-terraform saves stdout of terraform calls to outputs
+        run: terraform output -raw instance_id
       - name: Wait for VM to be ready
         timeout-minutes: 20
         run: |
+
           if [[ "${{ inputs.os }}" == windows ]]; then
             while true
             do
-              instance_status=$(aws ec2 describe-instance-status --instance-ids $(terraform output -raw instance_id) --no-cli-pager --query 'InstanceStatuses[0].InstanceStatus.Status' --output text)
-              system_status=$(aws ec2 describe-instance-status --instance-ids $(terraform output -raw instance_id) --no-cli-pager --query 'InstanceStatuses[0].SystemStatus.Status' --output text)
+              instance_status=$(aws ec2 describe-instance-status --instance-ids ${{ steps.instance-id.outputs.stdout }} --no-cli-pager --query 'InstanceStatuses[0].InstanceStatus.Status' --output text)
+              system_status=$(aws ec2 describe-instance-status --instance-ids ${{ steps.instance-id.outputs.stdout }} --no-cli-pager --query 'InstanceStatuses[0].SystemStatus.Status' --output text)
               if [[ $instance_status == ok && $system_status == ok ]]; then
                 break
               fi
@@ -153,7 +158,7 @@ jobs:
             version=v${{ inputs.version }}
           fi
           command_id=$(aws ssm send-command \
-            --instance-id $(terraform output -raw instance_id) \
+            --instance-id ${{ steps.instance-id.outputs.stdout }} \
             --document-name "AWS-RunPowerShellScript" \
             --parameters commands="'cd C:/envoy; C:\tools\git\bin\git.exe checkout $version; C:\tools\git\bin\bash.exe -c \\'TEMP=C: /c/envoy/ci/run_envoy_docker.sh ./ci/windows_ci_steps.sh //source/exe:envoy-static\\''" \
             --no-cli-pager \
@@ -162,7 +167,7 @@ jobs:
             --output-s3-bucket-name "envoy-windows-binary" --output-s3-key-prefix "envoy-build-logs-$version")
           echo $command_id  
           while true; do
-            status=$(aws ssm get-command-invocation --instance-id $(terraform output -raw instance_id) --command-id $command_id --query 'Status' --no-cli-pager --output text)
+            status=$(aws ssm get-command-invocation --instance-id ${{ steps.instance-id.outputs.stdout }} --command-id $command_id --query 'Status' --no-cli-pager --output text)
             if [[ "$status" == 'Success' ]]; then
               break
             fi
@@ -171,7 +176,7 @@ jobs:
           done
 
           # check if is success
-          aws s3 cp s3://envoy-windows-binary/envoy-build-logs-$version/$command_id/$(terraform output -raw instance_id)/awsrunPowerShellScript/0.awsrunPowerShellScript/stderr .
+          aws s3 cp s3://envoy-windows-binary/envoy-build-logs-$version/$command_id/${{ steps.instance-id.outputs.stdout }}/awsrunPowerShellScript/0.awsrunPowerShellScript/stderr .
           if grep -iqF "Build completed successfully" stderr
           then
             echo "Build completed successfully"
@@ -181,7 +186,7 @@ jobs:
           fi
 
           command_id=$(aws ssm send-command \
-              --instance-id $(terraform output -raw instance_id) \
+              --instance-id ${{ steps.instance-id.outputs.stdout }} \
               --document-name "AWS-RunPowerShellScript" \
               --parameters commands="'mv C:\envoy-docker-build\envoy\envoy_binary.tar.gz C:\envoy-docker-build\envoy\envoy_binary_$version.tar.gz'" \
               --no-cli-pager \
@@ -189,7 +194,7 @@ jobs:
               --output text)
           echo $command_id  
           while true; do
-            status=$(aws ssm get-command-invocation --instance-id $(terraform output -raw instance_id) --command-id $command_id --query 'Status' --no-cli-pager --output text)
+            status=$(aws ssm get-command-invocation --instance-id ${{ steps.instance-id.outputs.stdout }} --command-id $command_id --query 'Status' --no-cli-pager --output text)
             if [[ "$status" == 'Success' ]]; then
               break
             fi
@@ -197,7 +202,7 @@ jobs:
           done
 
           command_id=$(aws ssm send-command \
-              --instance-id $(terraform output -raw instance_id) \
+              --instance-id ${{ steps.instance-id.outputs.stdout }} \
               --document-name "AWS-RunPowerShellScript" \
               --parameters commands="'aws s3 cp C:\envoy-docker-build\envoy\envoy_binary_$version.tar.gz s3://envoy-windows-binary'" \
               --no-cli-pager \
@@ -205,7 +210,7 @@ jobs:
               --output text)
           echo $command_id  
           while true; do
-            status=$(aws ssm get-command-invocation --instance-id $(terraform output -raw instance_id) --command-id $command_id --query 'Status' --no-cli-pager --output text)
+            status=$(aws ssm get-command-invocation --instance-id ${{ steps.instance-id.outputs.stdout }} --command-id $command_id --query 'Status' --no-cli-pager --output text)
             if [[ "$status" == 'Success' ]]; then
               break
             fi
