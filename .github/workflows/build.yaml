@@ -217,7 +217,7 @@ jobs:
           tar xzf envoy_binary_$version.tar.gz
           mv envoy.exe envoy/envoy-$version
       - name: Download Envoy binaries
-        if: inputs.os != windows
+        if: inputs.os != 'windows'
         run: |
           envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
           scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
