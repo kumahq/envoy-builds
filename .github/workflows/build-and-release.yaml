@@ -54,7 +54,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ inputs.version }}
+          tag_name: v${{ inputs.version || 'main' }}
           draft: true
           files: |
             out/*
