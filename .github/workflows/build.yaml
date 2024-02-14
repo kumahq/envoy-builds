@@ -117,8 +117,22 @@ jobs:
               if [[ $instance_status == ok && $system_status == ok ]]; then
                 break
               fi
-              echo "Instance not ready, waiting..."
+              echo "Instance not healthy, waiting..."
               sleep 5
+            done
+            while true; do
+              command_id=$(aws ssm send-command \
+                --instance-id ${{ steps.instance-id.outputs.stdout }} \
+                --document-name "AWS-RunPowerShellScript" \
+                --parameters commands="'echo test'" \
+                --no-cli-pager \
+                --query 'Command.CommandId' \
+                --output text)
+                if [ $? == 0 ]; then
+                  break
+                fi
+                echo "SSM Manager not ready, waiting..."
+                sleep 5
             done
           else
             while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
@@ -150,7 +164,6 @@ jobs:
             mv build ..
           EOF
       - name: Build Envoy Windows
-        working-directory: terraform
         if: inputs.os == 'windows'
         run: |
           if [[ ${{ inputs.version }} == main ]]; then
@@ -158,19 +171,6 @@ jobs:
           else
             version=v${{ inputs.version }}
           fi
-          while true; do
-            command_id=$(aws ssm send-command \
-              --instance-id ${{ steps.instance-id.outputs.stdout }} \
-              --document-name "AWS-RunPowerShellScript" \
-              --parameters commands="'echo test'" \
-              --no-cli-pager \
-              --query 'Command.CommandId' \
-              --output text)
-              if [ $? == 0 ]; then
-                break
-              fi
-              sleep 5
-          done
           command_id=$(aws ssm send-command \
             --instance-id ${{ steps.instance-id.outputs.stdout }} \
             --document-name "AWS-RunPowerShellScript" \
