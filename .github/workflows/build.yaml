@@ -214,32 +214,31 @@ jobs:
             fi
             sleep 5
           done
+
+          command_id=$(aws ssm send-command \
+              --instance-id ${{ steps.instance-id.outputs.stdout }} \
+              --document-name "AWS-RunPowerShellScript" \
+              --parameters commands="'aws s3 cp C:\envoy-docker-build\envoy\envoy_binary_$version.tar.gz s3://envoy-windows-binary'" \
+              --no-cli-pager \
+              --query 'Command.CommandId' \
+              --output text)
+          echo $command_id
+          while true; do
+            status=$(aws ssm get-command-invocation --instance-id ${{ steps.instance-id.outputs.stdout }} --command-id $command_id --query 'Status' --no-cli-pager --output text)
+            if [[ "$status" == 'Success' ]]; then
+              break
+            fi
+            sleep 5
+          done
+          mkdir envoy
+          aws s3 cp s3://envoy-windows-binary/envoy_binary_$version.tar.gz .
+          tar xzf envoy_binary_$version.tar.gz
+          mv envoy.exe envoy/envoy-$version
       - name: Download Envoy binaries
+        if: inputs.os != 'windows'
         run: |
-          if [[ "${{ inputs.os }}" == windows ]]; then
-            command_id=$(aws ssm send-command \
-                --instance-id ${{ steps.instance-id.outputs.stdout }} \
-                --document-name "AWS-RunPowerShellScript" \
-                --parameters commands="'aws s3 cp C:\envoy-docker-build\envoy\envoy_binary_$version.tar.gz s3://envoy-windows-binary'" \
-                --no-cli-pager \
-                --query 'Command.CommandId' \
-                --output text)
-            echo $command_id
-            while true; do
-              status=$(aws ssm get-command-invocation --instance-id ${{ steps.instance-id.outputs.stdout }} --command-id $command_id --query 'Status' --no-cli-pager --output text)
-              if [[ "$status" == 'Success' ]]; then
-                break
-              fi
-              sleep 5
-            done
-            mkdir envoy
-            aws s3 cp s3://envoy-windows-binary/envoy_binary_$version.tar.gz .
-            tar xzf envoy_binary_$version.tar.gz
-            mv envoy.exe envoy/envoy-$version
-          else
-            envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
-            scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
-          fi
+          envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
+          scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
       - uses: actions/upload-artifact@v4
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.fips }}
