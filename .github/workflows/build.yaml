@@ -41,6 +41,7 @@ on:
         options:
           - darwin
           - linux
+          - windows
         description: OS to build Envoy for
         type: choice
         required: true
@@ -100,14 +101,24 @@ jobs:
         working-directory: terraform
         # setup-terraform saves stdout of terraform calls to outputs
         run: terraform output --raw public_ip
+      - id: instance-id
+        working-directory: terraform
+        # setup-terraform saves stdout of terraform calls to outputs
+        run: terraform output -raw instance_id
       - name: Wait for VM to be ready
+        working-directory: terraform
         timeout-minutes: 20
         run: |
-          while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
-          do
-            sleep 5
-          done
+          if [[ "${{ inputs.os }}" == windows ]]; then
+            ./wait-windows-host.sh '${{ steps.instance-id.outputs.stdout }}'
+          else
+            while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
+            do
+              sleep 5
+            done
+          fi
       - name: Build Envoy
+        if: inputs.os != 'windows'
         run: |
           ssh ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
             set -e
@@ -129,10 +140,26 @@ jobs:
 
             mv build ..
           EOF
+      - name: Build Envoy Windows
+        if: inputs.os == 'windows'
+        working-directory: terraform
+        run: ./build-windows.sh '${{ steps.instance-id.outputs.stdout }}' '${{ inputs.version }}'
       - name: Download Envoy binaries
         run: |
-          envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
-          scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
+          if [[ ${{ inputs.os }} == windows ]]; then
+            if [[ ${{ inputs.version }} == main ]]; then
+              version=main
+            else
+              version=v${{ inputs.version }}
+            fi
+            mkdir envoy
+            aws s3 cp s3://envoy-windows-binary/envoy_binary_$version.tar.gz .
+            tar xzf envoy_binary_$version.tar.gz
+            mv envoy.exe envoy/envoy-$version
+          else
+            envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
+            scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.fips }}

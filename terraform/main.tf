@@ -63,7 +63,7 @@ locals {
   user_data = {
     linux = local.linux_user_data
     darwin = local.macos_user_data
-    windows = ""
+    windows = local.windows_user_data
   }
 }
 
@@ -151,7 +151,7 @@ resource "aws_iam_role" "role" {
 }
 EOF
 
-  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
+  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore","arn:aws:iam::aws:policy/AmazonS3FullAccess"]
 }
 
 output "public_ip" {
