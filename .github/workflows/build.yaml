@@ -106,10 +106,11 @@ jobs:
         # setup-terraform saves stdout of terraform calls to outputs
         run: terraform output -raw instance_id
       - name: Wait for VM to be ready
+        working-directory: terraform
         timeout-minutes: 20
         run: |
           if [[ "${{ inputs.os }}" == windows ]]; then
-            ./terraform/wait-windows-host.sh '${{ steps.instance-id.outputs.stdout }}'
+            ./wait-windows-host.sh '${{ steps.instance-id.outputs.stdout }}'
           else
             while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
             do
