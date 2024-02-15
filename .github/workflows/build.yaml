@@ -108,36 +108,8 @@ jobs:
       - name: Wait for VM to be ready
         timeout-minutes: 20
         run: |
-          set +e
           if [[ "${{ inputs.os }}" == windows ]]; then
-            while true
-            do
-              instance_status=$(aws ec2 describe-instance-status --instance-ids ${{ steps.instance-id.outputs.stdout }} --no-cli-pager --query 'InstanceStatuses[0].InstanceStatus.Status' --output text)
-              system_status=$(aws ec2 describe-instance-status --instance-ids ${{ steps.instance-id.outputs.stdout }} --no-cli-pager --query 'InstanceStatuses[0].SystemStatus.Status' --output text)
-              if [[ $instance_status == ok && $system_status == ok ]]; then
-                break
-              fi
-              echo "Instance not healthy, waiting..."
-              sleep 5
-            done
-            echo "Instance healthy!"
-            while true; do
-              # check if SSM manager is ready for commands
-              # we don't use *aws ssm wait* because there is no way to extend timeout and it fails after 100 seconds
-              command_id=$(aws ssm send-command \
-                --instance-id ${{ steps.instance-id.outputs.stdout }} \
-                --document-name "AWS-RunPowerShellScript" \
-                --parameters commands="'echo test'" \
-                --no-cli-pager \
-                --query 'Command.CommandId' \
-                --output text)
-                if [ $? == 0 ]; then
-                  break
-                fi
-                echo "SSM Manager not ready, waiting..."
-                sleep 5
-            done
-            echo "SSM Manager ready!"
+            ./terraform/wait-windows-host.sh '${{ steps.instance-id.outputs.stdout }}'
           else
             while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
             do
@@ -169,74 +141,8 @@ jobs:
           EOF
       - name: Build Envoy Windows
         if: inputs.os == 'windows'
-        run: |
-          if [[ ${{ inputs.version }} == main ]]; then
-            version=main
-          else
-            version=v${{ inputs.version }}
-          fi
-          # execute Envoy build command
-          command_id=$(aws ssm send-command \
-            --instance-id ${{ steps.instance-id.outputs.stdout }} \
-            --document-name "AWS-RunPowerShellScript" \
-            --parameters commands="'cd C:/envoy; C:\tools\git\bin\git.exe checkout $version; C:\tools\git\bin\bash.exe -c \\'TEMP=C: /c/envoy/ci/run_envoy_docker.sh ./ci/windows_ci_steps.sh //source/exe:envoy-static\\''" \
-            --no-cli-pager \
-            --query 'Command.CommandId' \
-            --output text \
-            --output-s3-bucket-name "envoy-windows-binary" --output-s3-key-prefix "envoy-build-logs-$version")
-          echo $command_id  
-          while true; do
-            status=$(aws ssm get-command-invocation --instance-id ${{ steps.instance-id.outputs.stdout }} --command-id $command_id --query 'Status' --no-cli-pager --output text)
-            if [[ "$status" == 'Success' ]]; then
-              break
-            fi
-            sleep 5
-          done
-
-          # check if it's success
-          aws s3 cp s3://envoy-windows-binary/envoy-build-logs-$version/$command_id/${{ steps.instance-id.outputs.stdout }}/awsrunPowerShellScript/0.awsrunPowerShellScript/stderr .
-          if grep -iqF "Build completed successfully" stderr
-          then
-            echo "Build completed successfully"
-          else
-            cat stderr
-            exit 1
-          fi
-
-          # rename binary file
-          command_id=$(aws ssm send-command \
-              --instance-id ${{ steps.instance-id.outputs.stdout }} \
-              --document-name "AWS-RunPowerShellScript" \
-              --parameters commands="'mv C:\envoy-docker-build\envoy\envoy_binary.tar.gz C:\envoy-docker-build\envoy\envoy_binary_$version.tar.gz'" \
-              --no-cli-pager \
-              --query 'Command.CommandId' \
-              --output text)
-          echo $command_id  
-          while true; do
-            status=$(aws ssm get-command-invocation --instance-id ${{ steps.instance-id.outputs.stdout }} --command-id $command_id --query 'Status' --no-cli-pager --output text)
-            if [[ "$status" == 'Success' ]]; then
-              break
-            fi
-            sleep 5
-          done
-
-          # upload file to s3
-          command_id=$(aws ssm send-command \
-              --instance-id ${{ steps.instance-id.outputs.stdout }} \
-              --document-name "AWS-RunPowerShellScript" \
-              --parameters commands="'aws s3 cp C:\envoy-docker-build\envoy\envoy_binary_$version.tar.gz s3://envoy-windows-binary'" \
-              --no-cli-pager \
-              --query 'Command.CommandId' \
-              --output text)
-          echo $command_id
-          while true; do
-            status=$(aws ssm get-command-invocation --instance-id ${{ steps.instance-id.outputs.stdout }} --command-id $command_id --query 'Status' --no-cli-pager --output text)
-            if [[ "$status" == 'Success' ]]; then
-              break
-            fi
-            sleep 5
-          done
-          echo "Binary uploaded to s3"
+        working-directory: terraform
+        run: ./build-windows.sh '${{ steps.instance-id.outputs.stdout }}' '${{ inputs.version }}'
       - name: Download Envoy binaries
         run: |
           if [[ ${{ inputs.os }} == windows ]]; then
