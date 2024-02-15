@@ -45,7 +45,7 @@ check_build_status $command_id
 
 # rename binary file
 command_id=$(aws ssm send-command \
-    --instance-id ${{ steps.instance-id.outputs.stdout }} \
+    --instance-id $instance_id \
     --document-name "AWS-RunPowerShellScript" \
     --parameters commands="'mv C:\envoy-docker-build\envoy\envoy_binary.tar.gz C:\envoy-docker-build\envoy\envoy_binary_$version.tar.gz'" \
     --no-cli-pager \
@@ -56,7 +56,7 @@ wait_for_command $command_id
 
 # upload file to s3
 command_id=$(aws ssm send-command \
-    --instance-id ${{ steps.instance-id.outputs.stdout }} \
+    --instance-id $instance_id \
     --document-name "AWS-RunPowerShellScript" \
     --parameters commands="'aws s3 cp C:\envoy-docker-build\envoy\envoy_binary_$version.tar.gz s3://envoy-windows-binary'" \
     --no-cli-pager \
