@@ -61,7 +61,7 @@ jobs:
         (inputs.fips == false && inputs.arch == 'amd64') ||
         (inputs.fips == false && inputs.arch == 'arm64' && inputs.os != 'windows') ||
         (inputs.fips && inputs.os == 'linux' && inputs.arch == 'amd64')
-    timeout-minutes: 240
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       # TODO use aws ssm
@@ -71,7 +71,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
-          role-duration-seconds: 14400
+          role-duration-seconds: 7200
           aws-region: us-east-2
       - uses: hashicorp/setup-terraform@v3.0.0
       - run: terraform init
