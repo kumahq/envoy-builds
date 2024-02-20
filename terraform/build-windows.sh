@@ -1,9 +1,8 @@
 #!/bin/bash
 instance_id=$1
-if [[ $2 == main ]]; then
-    version=main
-else
-    version=v$2
+version=$2
+if [[ $version != main ]]; then
+    version=v$version
 fi
 
 wait_for_command(){
