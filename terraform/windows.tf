@@ -5,11 +5,11 @@ data "aws_ssm_parameter" "windows" {
 locals {
   windows_user_data = <<EOF
 <powershell>
-  # Set execution policy and update security protocol
+  # Set execution policy and update security protocol (TLS 1.2)
   Set-ExecutionPolicy Bypass -Scope Process -Force
   [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 
-  # Install Chocolatey
+  # Install Chocolatey (package manager for windows)
   iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
   # Create directory for Bazel and download Bazelisk
