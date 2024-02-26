@@ -57,7 +57,7 @@ locals {
       arm64 = "c7g.4xlarge"
     }
     windows = {
-      amd64 = "c6i.8xlarge"
+      amd64 = "c6i.4xlarge"
     }
   }
   user_data = {
