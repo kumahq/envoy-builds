@@ -57,10 +57,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: |
-        (inputs.fips == false && inputs.arch == 'amd64') ||
-        (inputs.fips == false && inputs.arch == 'arm64' && inputs.os != 'windows') ||
-        (inputs.fips && inputs.os == 'linux' && inputs.arch == 'amd64')
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
