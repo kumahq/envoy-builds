@@ -16,9 +16,19 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [darwin, linux]
+        os: [darwin, linux, windows]
         arch: [arm64, amd64]
         fips: [false, true]
+        exclude:
+          - os: windows
+            fips: true
+          - os: windows
+            arch: arm64
+          - os: darwin
+            fips: true
+          - os: linux
+            arch: arm64
+            fips: true
       fail-fast: false
     uses: ./.github/workflows/build.yaml
     secrets:
