@@ -17,12 +17,12 @@ esac
 
 export AWS_REGION=us-east-2
 hostID=$(aws ec2 describe-hosts \
-    --max-items 1 \
+    --max-items 5 \
     --filter \
         Name=tag-key,Values=EnvoyCI \
         Name=instance-type,Values="$instance_type" \
         Name=state,Values=available \
-    | jq -r '.Hosts[].HostId'
+    | jq '.Hosts[] | select(.Instances | length == 0) '| jq -r '.HostId' | head -n1
 )
 if [[ $hostID == "" ]]; then
     echo "Found no existing host, creating one instead"

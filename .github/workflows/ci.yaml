@@ -16,7 +16,7 @@ jobs:
     steps:
       # Caches and restores the bazelisk download directory, the bazel build directory.
       - name: Cache bazel
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v4.0.0
         env:
           cache-name: bazel-cache
         with:
@@ -27,7 +27,7 @@ jobs:
 
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
       # the rest of the steps
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: checkout envoy
         run: |
           mkdir -p build/envoy-sources
