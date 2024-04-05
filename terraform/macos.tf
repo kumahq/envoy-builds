@@ -9,8 +9,6 @@ locals {
 #!/bin/bash
 set -e
 
-pip3 install virtualenv
-
 sudo -u ec2-user -i <<SUDOEOF
 echo "alias python=python3" >> ~/.bash_profile
 # Using && is apparently necessary to ensure touch runs. Do not modify without testing!
