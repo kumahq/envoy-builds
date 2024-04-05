@@ -44,7 +44,7 @@ variable "envoy_version" {
 locals {
   ami = {
     linux = data.aws_ssm_parameter.debian.value
-    darwin = data.aws_ami.mac.image_id
+    darwin = "ami-0d470ec0f2471f0df" // data.aws_ami.mac.image_id
     windows = data.aws_ssm_parameter.windows.value
   }
   instance_type = {
