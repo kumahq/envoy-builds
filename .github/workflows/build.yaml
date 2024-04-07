@@ -1,5 +1,5 @@
 name: Build
-run-name: Build ${{ inputs.os }}-${{ inputs.arch }}-v${{ inputs.version }}${{ inputs.fips && "+fips" || "" }}
+run-name: Build ${{ inputs.os }}-${{ inputs.arch }}-v${{ inputs.version }}${{ inputs.fips && '+fips' || '' }}
 
 on:
   workflow_call:
