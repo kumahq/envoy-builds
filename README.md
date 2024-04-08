@@ -23,8 +23,9 @@ Run the `build-and-release.yaml` workflow to build binaries for linux/darwin
 amd64/arm64 and additionally a FIPS version for linux/amd64 and publish a _draft
 Github release_.
 
-The Windows binary currently needs to be manually built and uploaded to the
-release. See [`terraform/README.md`](terraform/README.md) for more information.
+#### Release specific version
+
+In our setup, each version of the envoy is hosted on a separate branch, beginning with `release-1.{version}`. Due to variations in library versions and the necessity for specific patches, it is essential to execute `build-and-release.yaml` for a particular version, such as 1.26.8, from its corresponding branch, for instance, `release-1.26`.
 
 #### AWS IAM
 
