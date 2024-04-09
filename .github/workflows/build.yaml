@@ -107,7 +107,7 @@ jobs:
         run: terraform output -raw instance_id
       - name: Wait for VM to be ready
         working-directory: terraform
-        timeout-minutes: 20
+        timeout-minutes: 40
         run: |
           if [[ "${{ inputs.os }}" == windows ]]; then
             ./wait-windows-host.sh '${{ steps.instance-id.outputs.stdout }}'
