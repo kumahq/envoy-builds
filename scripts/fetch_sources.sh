@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script fetches Envoy source code to $SOURCE_DIR
 #
@@ -10,7 +10,13 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-PATCH_FILE=$(realpath "scripts/luajit.patch.patch")
+PATCH_FILES_1_26=(
+  $(realpath "scripts/dns_filter_resolver.h.patch")
+  $(realpath "scripts/filter_test.cc.patch")
+  $(realpath "scripts/rbac_filter.cc.patch")
+)
+
+DARWIN_PATCH_FILE=$(realpath "scripts/luajit.patch.patch")
 
 # clone Envoy repo if not exists
 if [[ ! -d "${SOURCE_DIR}" ]]; then
@@ -32,8 +38,16 @@ git reset --hard FETCH_HEAD
 
 echo "ENVOY_TAG=${ENVOY_TAG}"
 
-if [[ "${GOOS}" == "darwin" ]]; then
-  git apply -v "${PATCH_FILE}"
+echo "Checking for patches"
+
+if [[ "${ENVOY_TAG}" == "v1.26"* ]]; then
+  echo "Applying patches for Envoy 1.26"
+  git apply -v "${PATCH_FILES_1_26[@]}"
+else
+  if [[ "${GOOS}" == "darwin" ]]; then
+    echo "Applying patches for Darwin"
+    git apply -v "${DARWIN_PATCH_FILE}"
+  fi
 fi
 
 popd
