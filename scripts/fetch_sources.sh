@@ -11,9 +11,9 @@ set -o pipefail
 set -o nounset
 
 PATCH_FILES_1_26=(
-  $(realpath "scripts/dns_filter_resolver.h.patch")
-  $(realpath "scripts/filter_test.cc.patch")
-  $(realpath "scripts/rbac_filter.cc.patch")
+  "$(realpath "scripts/dns_filter_resolver.h.patch")"
+  "$(realpath "scripts/filter_test.cc.patch")"
+  "$(realpath "scripts/rbac_filter.cc.patch")"
 )
 
 DARWIN_PATCH_FILE=$(realpath "scripts/luajit.patch.patch")
