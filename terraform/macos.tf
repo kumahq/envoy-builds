@@ -4,13 +4,8 @@ variable "host_id" {
   description = "Dedicated host id for building on Darwin"
 }
 
-variable "macos_version" {
-  type = number
-  default = 12
-  description = "If using Darwin, which macos major version to use"
-}
-
 locals {
+    macos_version = startswith(var.envoy_version, "1.26") ? 11 : 12
     macos_user_data = <<EOF
 #!/bin/bash
 set -e
@@ -29,7 +24,7 @@ data "aws_ami" "mac" {
   filter {
     name = "name"
     values = [
-      "amzn-ec2-macos-${var.macos_version}.*.*-*-*"
+      "amzn-ec2-macos-${local.macos_version}.*.*-*-*"
     ]
   }
   filter {

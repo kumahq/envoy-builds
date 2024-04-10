@@ -94,11 +94,6 @@ jobs:
           else
             echo "SSH_USER=ec2-user" >> $GITHUB_ENV
           fi
-          if [[ "${{ inputs.os }}" == darwin ]]; then
-            if [[ "${{ inputs.version }}" == "1.26"* ]]; then
-              echo "macos_version = 11" >> terraform.tfvars
-            fi
-          fi
       - run: terraform apply -input=false -auto-approve
         working-directory: terraform
         id: terraform-apply
