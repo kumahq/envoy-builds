@@ -1,12 +1,16 @@
 variable "host_id" {
-  type = string
-  default = ""
+  type        = string
+  default     = ""
   description = "Dedicated host id for building on Darwin"
 }
 
 locals {
-    macos_version = startswith(var.envoy_version, "1.26") ? 11 : 12
-    macos_user_data = <<EOF
+  macos_version = (
+    startswith(var.envoy_version, "1.26")
+    || startswith(var.envoy_version, "1.27")
+    || startswith(var.envoy_version, "1.28")
+  ) ? 11 : 12
+  macos_user_data = <<EOF
 #!/bin/bash
 set -e
 
