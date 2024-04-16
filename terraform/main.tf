@@ -37,7 +37,7 @@ variable "fips" {
 
 variable "envoy_version" {
   type        = string
-  description = "Envoy version"
+  description = "Envoy version, not prefixed with v"
   default     = "main"
 }
 
