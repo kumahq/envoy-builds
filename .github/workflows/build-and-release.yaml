@@ -51,8 +51,7 @@ jobs:
     steps:
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v4
-      - if: inputs.os != 'windows' || (!startsWith(inputs.version, '1.3') && inputs.version != 'main')
-        run: |
+      - run: |
           mkdir out
           for dir in envoy*; do
             IFS=- read -r envoy os arch fips <<< "${dir}"
