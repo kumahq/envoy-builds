@@ -1,5 +1,5 @@
 name: Build and release
-run-name: Build and release v${{ inputs.version }}
+run-name: "Build ${{ !inputs.skip-release && 'and release ' || '' }}v${{ inputs.version }}"
 
 on:
   workflow_dispatch:
