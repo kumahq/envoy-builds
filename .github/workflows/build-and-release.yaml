@@ -8,6 +8,10 @@ on:
         description: Envoy version to build (don't include leading v)
         type: string
         required: true
+      skip-release:
+        description: Skip the release?
+        type: boolean
+        required: false
   schedule:
     - cron: 0 6 * * 1
 
@@ -64,6 +68,7 @@ jobs:
             done
           done
       - name: Release
+        if: ${{ !inputs.skip-release }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ inputs.version || 'main' }}
