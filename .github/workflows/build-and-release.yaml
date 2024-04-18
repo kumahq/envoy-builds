@@ -70,3 +70,8 @@ jobs:
           draft: true
           files: |
             out/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: envoy-v${{ inputs.version }}
+          path: out/
+          if-no-files-found: error
