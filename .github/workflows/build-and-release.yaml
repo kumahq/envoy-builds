@@ -28,14 +28,14 @@ jobs:
         fips: [false, true]
         exclude:
           - os: windows
-            fips: true
+            fips: fips
           - os: windows
             arch: arm64
           - os: darwin
-            fips: true
+            fips: fips
           - os: linux
             arch: arm64
-            fips: true
+            fips: fips
       fail-fast: false
     uses: ./.github/workflows/build.yaml
     secrets:
