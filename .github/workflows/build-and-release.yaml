@@ -25,7 +25,7 @@ jobs:
       matrix:
         os: [darwin, linux, windows]
         arch: [arm64, amd64]
-        fips: [false, true]
+        fips: ['', 'fips']
         exclude:
           - os: windows
             fips: true
@@ -43,7 +43,7 @@ jobs:
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
-      fips: ${{ matrix.fips }}
+      fips: ${{ matrix.fips == 'fips' }}
       version: ${{ inputs.version || 'main' }}
   package:
     runs-on: ubuntu-latest
