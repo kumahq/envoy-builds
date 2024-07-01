@@ -66,9 +66,9 @@ jobs:
       - name: Generate SSH key
         run: |
           if [[ "${{ inputs.os }}" == windows ]]; then
-            ssh-keygen -t rsa -b 4096 -q -N "" -f ~/.ssh/id_aws
+            ssh-keygen -t rsa -b 4096 -q -N "" -f ~/.ssh/id_rsa
           else
-            ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_aws
+            ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_ed25519
           fi
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -88,7 +88,11 @@ jobs:
         working-directory: terraform
         run: |
           cat <<EOF >> terraform.tfvars
-          public_key_path = "~/.ssh/id_aws.pub"
+          if [[ "${{ inputs.os }}" == windows ]]; then
+            public_key_path = "~/.ssh/id_rsa.pub"
+          else
+            public_key_path = "~/.ssh/id_ed25519.pub"
+          fi
           arch = "${{ inputs.arch }}"
           os = "${{ inputs.os }}"
           fips = ${{ inputs.fips }}
