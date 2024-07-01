@@ -64,7 +64,12 @@ jobs:
       - uses: actions/checkout@v4
       # TODO use aws ssm
       - name: Generate SSH key
-        run: ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_ed25519
+        run: |
+          if [[ "${{ inputs.os }}" == windows ]]; then
+            ssh-keygen -t rsa -q -N "" -f ~/.ssh/id_aws
+          else
+            ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_aws
+          fi
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -83,7 +88,7 @@ jobs:
         working-directory: terraform
         run: |
           cat <<EOF >> terraform.tfvars
-          public_key_path = "~/.ssh/id_ed25519.pub"
+          public_key_path = "~/.ssh/id_aws.pub"
           arch = "${{ inputs.arch }}"
           os = "${{ inputs.os }}"
           fips = ${{ inputs.fips }}
