@@ -118,7 +118,7 @@ jobs:
           if [[ "${{ inputs.os }}" == windows ]]; then
             ./wait-windows-host.sh '${{ steps.instance-id.outputs.stdout }}'
           else
-            while ! timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
+            while ! timeout 10 ssh -i ~/.ssh/id_aws -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
             do
               sleep 5
             done
@@ -126,7 +126,7 @@ jobs:
       - name: Build Envoy
         if: inputs.os != 'windows'
         run: |
-          ssh ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
+          ssh -i ~/.ssh/id_aws ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
             set -e
             if [[ "${{ inputs.os }}" == darwin ]]; then
               export PATH="/opt/homebrew/bin:$PATH"
@@ -164,7 +164,7 @@ jobs:
             mv envoy.exe envoy/envoy-$version
           else
             envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
-            scp -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
+            scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
           fi
       - uses: actions/upload-artifact@v4
         with:
