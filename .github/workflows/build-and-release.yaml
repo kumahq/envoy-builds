@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Envoy version to build (don't include leading v)
+        description: Envoy version to build (don't include leading v, don't cancel the build because things might not be cleaned up by terraform properly)
         type: string
         required: true
       skip-release:
@@ -20,7 +20,20 @@ permissions:
   contents: write
 
 jobs:
+  check-input:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if version starts with "v"
+        id: check-v
+        run: |
+          VERSION=${{ inputs.version }}
+          if [[ $VERSION == v* ]]; then
+            echo "Run this action without 'v' prefix - ${VERSION:1}. Don't cancel a build in progress build because things might not be cleaned up by terraform"
+            exit 1
+          fi
+        shell: bash
   build:
+    needs: check-input
     strategy:
       matrix:
         os: [darwin, linux, windows]
