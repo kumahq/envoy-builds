@@ -9,7 +9,7 @@ There is a new Makefile target `build/envoy` that places an `envoy` binary in `b
 Build the latest supported Envoy binary for your host OS:
 
 ```shell
-$ ENVOY_TAG=v1.25.2 make build/envoy
+$ ENVOY_TAG=v1.30.4 make build/envoy
 ```
 
 ## CI
@@ -19,12 +19,9 @@ in a VM.
 
 ### Github workflow
 
-Run the `build-and-release.yaml` workflow to build binaries for linux/darwin
-amd64/arm64 and additionally a FIPS version for linux/amd64 and publish a _draft
+Run the `build-and-release.yaml` workflow with desired version of envoy without leading `v` (`1.29.7`) to build binaries
+for linux/darwin amd64/arm64 and additionally a FIPS version for linux/amd64, windows amd64 and publish a _draft
 Github release_.
-
-The Windows binary currently needs to be manually built and uploaded to the
-release. See [`terraform/README.md`](terraform/README.md) for more information.
 
 #### AWS IAM
 
