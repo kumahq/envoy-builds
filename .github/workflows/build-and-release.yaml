@@ -20,20 +20,25 @@ permissions:
   contents: write
 
 jobs:
-  check-input:
+  check-preconditions:
     runs-on: ubuntu-latest
     steps:
       - name: Fail if version starts with "v"
-        id: check-v
+        id: check-preconditions
         run: |
           VERSION=${{ inputs.version }}
           if [[ $VERSION == v* ]]; then
             echo "Run this action without 'v' prefix - ${VERSION:1}. Don't cancel a build in progress build because things might not be cleaned up by terraform"
             exit 1
           fi
-        shell: bash
+
+          RUNNING=$(gh run list --workflow .github/workflows/build-and-release.yaml --json status,conclusion,createdAt,updatedAt | jq '[.[] | select((.status == "in_progress") or (.updatedAt > (now - 7200 | strftime("%Y-%m-%dT%H:%M:%SZ"))))] | length')
+          if [ "$RUNNING" -gt "4" ]; then
+            echo "We can't have more than 4 envoy builds that are either running or finished in the last 2 hours"
+            exit 2
+          fi
   build:
-    needs: check-input
+    needs: check-preconditions
     strategy:
       matrix:
         os: [darwin, linux, windows]
