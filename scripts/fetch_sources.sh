@@ -24,7 +24,7 @@ if [[ ! -d "${SOURCE_DIR}" ]]; then
   (
     cd "${SOURCE_DIR}"
     git init .
-    git remote add origin https://github.com/envoyproxy/envoy.git
+    git remote add origin https://github.com/michaelbeaumont/envoy.git
   )
 else
   echo "Envoy source directory already exists, just fetching"
@@ -33,7 +33,7 @@ fi
 
 pushd "${SOURCE_DIR}"
 
-git fetch origin --depth=1 "${ENVOY_TAG}"
+git fetch origin --depth=1 fix/dns-id-0-v1.27
 git reset --hard FETCH_HEAD
 
 echo "ENVOY_TAG=${ENVOY_TAG}"
