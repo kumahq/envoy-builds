@@ -23,6 +23,9 @@ Run the `build-and-release.yaml` workflow with desired version of envoy without 
 for linux/darwin amd64/arm64 and additionally a FIPS version for linux/amd64, windows amd64 and publish a _draft
 Github release_.
 
+### Limitations
+
+It's only possible to run 4 jobs in parallel due to the number of available macOS hosts.
 #### AWS IAM
 
 The Github workflow assumes the `envoy-ci` role. This role has the
