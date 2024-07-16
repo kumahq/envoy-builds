@@ -27,7 +27,7 @@ locals {
 
   # Install Git using Chocolatey
   choco install -y git.portable
-  C:\tools\git\bin\git.exe clone https://github.com/envoyproxy/envoy.git C:/envoy
+  C:\tools\git\bin\git.exe clone https://github.com/kumahq/envoy-builds.git C:/envoy-builds
 
   # Install Docker
   Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/microsoft/Windows-Containers/Main/helpful_tools/Install-DockerCE/install-docker-ce.ps1" -o "C:/install-docker-ce.ps1"
