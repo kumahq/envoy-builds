@@ -10,6 +10,12 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+declare -A patches_per_version
+patches_per_version[v1.27]="$(realpath "patches/v1.27-0001-dns-don-t-error-if-header-id-is-0.patch")"
+patches_per_version[v1.28]="$(realpath "patches/v1.28-0001-dns-don-t-error-if-header-id-is-0.patch")"
+patches_per_version[v1.29]="$(realpath "patches/v1.29-0001-dns-don-t-error-if-header-id-is-0.patch")"
+patches_per_version[v1.30]="$(realpath "patches/v1.30-0001-dns-don-t-error-if-header-id-is-0.patch")"
+
 PATCH_FILES_1_26=(
   "$(realpath "scripts/dns_filter_resolver.h.patch")"
   "$(realpath "scripts/filter_test.cc.patch")"
@@ -49,5 +55,11 @@ else
     git apply -v "${DARWIN_PATCH_FILE}"
   fi
 fi
+
+IFS=. read -r major minor rest <<< "$(cat VERSION.txt)"
+patches=${patches_per_version["v${major}.${minor}"]}
+# read string into array because lists of lists is too much for bash
+read -ra patches <<< "${patches}"
+git apply -v "${patches[@]}"
 
 popd

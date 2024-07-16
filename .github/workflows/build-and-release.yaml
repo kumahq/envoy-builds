@@ -1,5 +1,5 @@
 name: Build and release
-run-name: "Build ${{ !inputs.skip-release && 'and release ' || '' }}v${{ inputs.version }}"
+run-name: "Build ${{ !inputs.skip-release && 'and release ' || '' }}v${{ inputs.version }}${{ inputs.suffix }}"
 
 on:
   workflow_dispatch:
@@ -8,6 +8,9 @@ on:
         description: Envoy version to build (don't include leading v, don't cancel the build because things might not be cleaned up by terraform properly)
         type: string
         required: true
+      suffix:
+        description: Additional suffix for release/tag (must include leading '-' if desired)
+        type: string
       skip-release:
         description: Skip the release?
         type: boolean
@@ -73,8 +76,10 @@ jobs:
 
               bin="$(basename "${bin}")"
               IFS=- read -r envoy suffix <<< "${bin}"
-              # We know the suffix begins with a version number
-              archive_name="envoy-${os}-${arch}-${suffix}"
+              archive_name="envoy-${os}-${arch}-v${{ inputs.version }}${{ inputs.suffix }}"
+              if [[ "${fips}" == "true" ]]; then
+                archive_name="${archive_name}+fips"
+              fi
 
               # move file into tar.gz and rename to 'envoy' in archive
               tar -C "${dir}" "--transform=flags=r;s|${bin}|envoy|" -czvf "out/${archive_name}.tar.gz" "${bin}"
@@ -84,12 +89,12 @@ jobs:
         if: ${{ !inputs.skip-release }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version || 'main' }}
+          tag_name: v${{ inputs.version || 'main' }}${{ inputs.suffix }}
           draft: true
           files: |
             out/*
       - uses: actions/upload-artifact@v4
         with:
-          name: envoy-v${{ inputs.version }}
+          name: envoy-v${{ inputs.version }}${{ inputs.suffix }}
           path: out/
           if-no-files-found: error
