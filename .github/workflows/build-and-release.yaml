@@ -1,5 +1,5 @@
 name: Build and release
-run-name: "Build ${{ !inputs.skip-release && 'and release ' || '' }}v${{ inputs.version }}"
+run-name: "Build ${{ !inputs.skip-release && 'and release ' || '' }}v${{ inputs.version }}${{ inputs.suffix }}"
 
 on:
   workflow_dispatch:
@@ -95,6 +95,6 @@ jobs:
             out/*
       - uses: actions/upload-artifact@v4
         with:
-          name: envoy-v${{ inputs.version }}
+          name: envoy-v${{ inputs.version }}${{ inputs.suffix }}
           path: out/
           if-no-files-found: error
