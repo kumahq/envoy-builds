@@ -29,11 +29,21 @@ check_build_status(){
     fi
 }
 
+command_id=$(aws ssm send-command \
+    --instance-id $instance_id \
+    --document-name "AWS-RunPowerShellScript" \
+    --parameters commands="'cd C:/envoy-builds; C:\tools\git\bin\bash.exe -c \\'cd /c/envoy-builds && GOOS=windows ENVOY_TAG=$version SOURCE_DIR=/c/envoy ./scripts/fetch_sources.sh\\'; cd C:/envoy; C:\tools\git\bin\git.exe config --global --add safe.directory C:/envoy;'" \
+    --no-cli-pager \
+    --query 'Command.CommandId' \
+    --output text)
+echo $command_id
+wait_for_command $command_id
+
 # execute Envoy build command
 command_id=$(aws ssm send-command \
     --instance-id $instance_id \
     --document-name "AWS-RunPowerShellScript" \
-    --parameters commands="'cd C:/envoy; C:\tools\git\bin\git.exe checkout $version; C:\tools\git\bin\bash.exe -c \\'TEMP=C: /c/envoy/ci/run_envoy_docker.sh ./ci/windows_ci_steps.sh //source/exe:envoy-static\\''" \
+    --parameters commands="'cd C:/envoy; C:\tools\git\bin\bash.exe -c \\'TEMP=C: /c/envoy/ci/run_envoy_docker.sh ./ci/windows_ci_steps.sh //source/exe:envoy-static\\''" \
     --no-cli-pager \
     --query 'Command.CommandId' \
     --output text \
