@@ -40,7 +40,7 @@ fi
 
 pushd "${SOURCE_DIR}"
 
-git fetch origin --depth=1 "${ENVOY_TAG}"
+git fetch origin "${ENVOY_TAG}"
 git reset --hard FETCH_HEAD
 
 echo "ENVOY_TAG=${ENVOY_TAG}"
@@ -62,5 +62,7 @@ patches=${patches_per_version["v${major}.${minor}"]}
 # read string into array because lists of lists is too much for bash
 read -ra patches <<< "${patches}"
 git apply -v "${patches[@]}"
+
+git revert :/'grpc: propagate tracing headers when using google grpc streams \(#34395\)' || true
 
 popd
