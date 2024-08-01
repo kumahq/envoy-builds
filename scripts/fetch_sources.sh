@@ -43,7 +43,7 @@ pushd "${SOURCE_DIR}"
 git fetch origin "${ENVOY_TAG}"
 git reset --hard FETCH_HEAD
 
-git checkout eec0b21af7662c58f08335cbeac6540cc607d5b1
+git checkout 004d26e690546c12492f11f11b4a8ab418593d4f
 
 echo "ENVOY_TAG=${ENVOY_TAG}"
 
