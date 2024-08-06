@@ -58,9 +58,17 @@ else
 fi
 
 IFS=. read -r major minor rest <<< "$(cat VERSION.txt)"
-patches=${patches_per_version["v${major}.${minor}"]}
-# read string into array because lists of lists is too much for bash
-read -ra patches <<< "${patches}"
-git apply -v "${patches[@]}"
+version_key="v${major}.${minor}"
+
+# Check if the version exists in the patches_per_version array
+if [[ -v "patches_per_version[$version_key]" ]]; then
+    patches=${patches_per_version["$version_key"]}
+    # read string into array because lists of lists is too much for bash
+    read -ra patches <<< "${patches}"
+    git apply -v "${patches[@]}"
+    echo "Patches for version $version_key: $patches"
+else
+    echo "No patches found for version $version_key"
+fi
 
 popd
