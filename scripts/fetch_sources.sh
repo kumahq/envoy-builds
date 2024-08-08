@@ -16,6 +16,7 @@ patches_per_version[v1.28]="$(realpath "patches/v1.28-0001-dns-don-t-error-if-he
 patches_per_version[v1.29]="$(realpath "patches/v1.29-0001-dns-don-t-error-if-header-id-is-0.patch")"
 patches_per_version[v1.30]="$(realpath "patches/v1.30-0001-dns-don-t-error-if-header-id-is-0.patch")"
 patches_per_version[v1.31]="$(realpath "patches/v1.31-0001-dns-don-t-error-if-header-id-is-0.patch")"
+patches_per_version[v1.32]="$()"
 
 PATCH_FILES_1_26=(
   "$(realpath "scripts/dns_filter_resolver.h.patch")"
@@ -58,17 +59,11 @@ else
 fi
 
 IFS=. read -r major minor rest <<< "$(cat VERSION.txt)"
-version_key="v${major}.${minor}"
-
-# Check if the version exists in the patches_per_version array
-if [[ -v "patches_per_version[$version_key]" ]]; then
-    patches=${patches_per_version["$version_key"]}
-    # read string into array because lists of lists is too much for bash
-    read -ra patches <<< "${patches}"
-    git apply -v "${patches[@]}"
-    echo "Patches for version $version_key: $patches"
-else
-    echo "No patches found for version $version_key"
+patches=${patches_per_version["v${major}.${minor}"]}
+# read string into array because lists of lists is too much for bash
+if [[ ! -z "${patches[@]}" ]]; then
+  read -ra patches <<< "${patches}"
+  git apply -v "${patches[@]}"
 fi
 
 popd
