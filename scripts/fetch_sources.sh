@@ -61,7 +61,7 @@ fi
 IFS=. read -r major minor rest <<< "$(cat VERSION.txt)"
 patches=${patches_per_version["v${major}.${minor}"]}
 # read string into array because lists of lists is too much for bash
-if [[ ! -z "${patches[@]}" ]]; then
+if [[ -n "${patches[@]}" ]]; then
   read -ra patches <<< "${patches}"
   git apply -v "${patches[@]}"
 fi
