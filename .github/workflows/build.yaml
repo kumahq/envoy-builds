@@ -76,7 +76,7 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/envoy-ci
           role-duration-seconds: 10800
           aws-region: us-east-2
-      - uses: hashicorp/setup-terraform@v3.1.1
+      - uses: hashicorp/setup-terraform@v3.1.2
       - run: terraform init
         working-directory: terraform
       - name: Find Mac OS dedicated host
