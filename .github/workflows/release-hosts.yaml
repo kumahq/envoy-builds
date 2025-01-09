@@ -14,7 +14,7 @@ jobs:
       - name: Check Envoy released versions
         id: check-envoy-released-versions
         run: |
-          envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (24 * 3600)) | .tag_name')
+          envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (30 * 24 * 3600)) | .tag_name')
           echo "envoy_versions=$envoy_versions" >> $GITHUB_OUTPUT
       - name: Get Envoy versions to release
         id: get-versions-to-release
