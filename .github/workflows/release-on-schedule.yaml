@@ -5,6 +5,10 @@ on:
    - cron:  '0 0 * * *' #scheduled at 00:00 everyday
   workflow_dispatch: {}
 
+permissions:
+  id-token: write
+  contents: write
+
 jobs:
   get-envoy-versions:
     runs-on: ubuntu-latest

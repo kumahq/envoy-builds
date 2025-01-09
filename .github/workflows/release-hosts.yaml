@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 0 * * *'  # Scheduled at 00:00 every day
   workflow_dispatch: {}
+permissions:
+  id-token: write
+  contents: write
 
 jobs:
   get-envoy-versions:
@@ -50,4 +53,3 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
     with:
       version: ${{ matrix.version }}
-    secrets: inherit
