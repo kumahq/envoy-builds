@@ -27,7 +27,7 @@ jobs:
           eval "envoy_versions=(${{ steps.check-envoy-released-versions.outputs.envoy_versions }})"
           for envoy_version in "${envoy_versions[@]}"; do
             echo "Checking if $envoy_version has been already released"
-            version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
+            version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name != \"$envoy_version\") | .tag_name")
             if [ -z "$version" ]; then
               echo "No version found for $envoy_version"
               versions_to_release+=("$envoy_version")
