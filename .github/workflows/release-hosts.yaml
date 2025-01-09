@@ -17,23 +17,25 @@ jobs:
         id: check-envoy-released-versions
         run: |
           envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (30 * 24 * 3600)) | .tag_name')
-          echo "::set-output name=envoy_versions::$envoy_versions"
+          envoy_versions_str=$(echo $envoy_versions | tr '\n' ' ')
+          echo "envoy_versions=$envoy_versions_str" >> $GITHUB_OUTPUT
       - name: Get Envoy versions to release
         id: get-versions-to-release
         run: |
           versions_to_release=()
           eval "envoy_versions=(${{ steps.check-envoy-released-versions.outputs.envoy_versions }})"
-          for envoy_version in $envoy_versions; do
+          for envoy_version in "${envoy_versions[@]}"; do
             echo "Checking if $envoy_version has been already released"
-            version=$(gh api repos/kumahq/envoy-builds/releases --jq   ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
+            version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
             if [ -z "$version" ]; then
               echo "No version found for $envoy_version"
-              versions_to_release+=$envoy_version
+              versions_to_release+=("$envoy_version")  # Correct way to append to an array
             else
               echo "Envoy $version already released, skip"
             fi
           done
-          echo "::set-output name=versions_to_release::$(echo ${versions_to_release[@]} | jq -R -s -c 'split(" ")')"
+          # Set output using the correct method
+          echo "versions_to_release=${versions_to_release[@]}" >> $GITHUB_OUTPUT
   trigger-release:
     runs-on: ubuntu-latest
     needs: get-envoy-versions
