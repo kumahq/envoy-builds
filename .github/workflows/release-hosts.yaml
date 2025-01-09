@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '0 0 * * *'  # Scheduled at 00:00 every day
   workflow_dispatch: {}
+
 permissions:
   id-token: write
   contents: write
