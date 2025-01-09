@@ -16,7 +16,7 @@ jobs:
       - name: Check Envoy released versions
         id: check-envoy-released-versions
         run: |
-          envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (50 * 24 * 3600)) | .tag_name')
+          envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (30 * 24 * 3600)) | .tag_name')
           envoy_versions_str=$(echo $envoy_versions | tr '\n' ' ')
           echo "envoy_versions=$envoy_versions_str" >> $GITHUB_OUTPUT
 
@@ -27,7 +27,7 @@ jobs:
           eval "envoy_versions=(${{ steps.check-envoy-released-versions.outputs.envoy_versions }})"
           for envoy_version in "${envoy_versions[@]}"; do
             echo "Checking if $envoy_version has been already released"
-            version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name != \"$envoy_version\") | .tag_name")
+            version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
             if [ -z "$version" ]; then
               echo "No version found for $envoy_version"
               versions_to_release+=("$envoy_version")
@@ -40,13 +40,14 @@ jobs:
           echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
 
   trigger-release:
-    runs-on: ubuntu-latest
     needs: get-envoy-versions
     strategy:
       matrix:
         version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
       fail-fast: false
-    steps:
-      - name: Test
-        run: |
-          echo "Releasing version: ${{ matrix.version }}"
+    uses: ./.github/workflows/build-and-release.yaml
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    with:
+      version: ${{ matrix.version }}
+    secrets: inherit
