@@ -33,6 +33,7 @@ jobs:
           done
           echo "::set-output name=versions_to_release::$(echo ${versions_to_release[@]} | jq -R -s -c 'split(" ")')"
   trigger-release:
+    runs-on: ubuntu-latest
     needs: get-envoy-versions
     strategy:
       matrix:
