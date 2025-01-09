@@ -35,8 +35,9 @@ jobs:
               echo "Envoy $version already released, skip"
             fi
           done
-          # Set output using the correct method
-          echo "versions_to_release=$(echo ${versions_to_release[@]} | jq -R -s -c 'split(\" \")')" >> $GITHUB_OUTPUT
+          # Create a valid JSON array using jq
+          versions_to_release_json=$(echo "${versions_to_release[@]}" | jq -R -s -c 'split(" ")')
+          echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
 
   trigger-release:
     runs-on: ubuntu-latest
