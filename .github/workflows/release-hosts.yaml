@@ -34,7 +34,8 @@ jobs:
             version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
             if [ -z "$version" ]; then
               echo "No version found for $envoy_version"
-              versions_to_release+=("$envoy_version")
+              version_without_v=$(echo "$envoy_version" | sed 's/^v//')
+              versions_to_release+=("$version_without_v")
             else
               echo "Envoy $version already released, skip"
             fi
