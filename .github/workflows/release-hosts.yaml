@@ -8,6 +8,8 @@ on:
 jobs:
   get-envoy-versions:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     outputs:
       versions_to_release: ${{ steps.get-versions-to-release.outputs.versions_to_release }}
     steps:
