@@ -55,8 +55,7 @@ jobs:
       matrix:
         version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
       fail-fast: false
-    secrets:
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    secrets: inherit
     steps:
       - name: Delay to not use allocated host for OSX
         run: |
