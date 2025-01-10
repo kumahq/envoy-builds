@@ -47,6 +47,7 @@ jobs:
   trigger-release:
     runs-on: ubuntu-latest
     needs: get-envoy-versions
+    if: ${{ needs.get-envoy-versions.outputs.versions_to_release != '' }}
     strategy:
       matrix:
         version: ${{ needs.get-envoy-versions.outputs.versions_to_release }}
