@@ -51,10 +51,10 @@ jobs:
   trigger-release:
     needs: get-envoy-versions
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
-      fail-fast: false
+    # strategy:
+    #   matrix:
+    #     version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
+    #   fail-fast: false
     steps:
       - name: Debug Output of versions_to_release
         run: |
