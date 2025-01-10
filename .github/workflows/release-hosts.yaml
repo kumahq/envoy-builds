@@ -58,8 +58,14 @@ jobs:
     steps:
       - name: Delay to not use allocated host for OSX
         run: |
-          eval "version_list=(${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }})"
-          echo $version_list[@]
+          # Parse the JSON output into a Bash array
+          version_list=$(echo '${{ needs.get-envoy-versions.outputs.versions_to_release }}' | jq -r '.[]')
+
+          # Convert the JSON array to a Bash array
+          readarray -t version_list <<< "$version_list"
+
+          # Debug: print the array contents
+          echo "Array contents: ${version_list[@]}"
           for i in "${!version_list[@]}"; do
             echo "Matrix entry index is $i"
             if [[ "${version_list[$i]}" == "${{ matrix.version }}" ]]; then
