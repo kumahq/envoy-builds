@@ -39,6 +39,7 @@ jobs:
       - name: Fail if version starts with "v"
         id: check-v
         run: |
+          exit 1
           VERSION=${{ inputs.version }}
           if [[ $VERSION == v* ]]; then
             echo "Run this action without 'v' prefix - ${VERSION:1}. Don't cancel a build in progress build because things might not be cleaned up by terraform"
