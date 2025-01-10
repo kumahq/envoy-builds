@@ -35,7 +35,7 @@ jobs:
             if [ -z "$version" ]; then
               echo "No version found for $envoy_version"
               version_without_v=$(echo "$envoy_version" | sed 's/^v//')
-              versions_to_release+=("$version_without_v")
+              versions_to_release+=("\"$version_without_v\"")  # Add quotes for JSON compliance
             else
               echo "Envoy $version already released, skip"
             fi
