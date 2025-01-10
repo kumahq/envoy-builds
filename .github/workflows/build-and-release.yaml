@@ -8,6 +8,10 @@ on:
         description: Envoy version to build (don't include leading v)
         type: string
         required: true
+    secrets:
+      AWS_ACCOUNT_ID:
+        description: AWS account ID for infrastructure
+        required: true
   workflow_dispatch:
     inputs:
       version:
