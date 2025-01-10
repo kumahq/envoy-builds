@@ -46,7 +46,8 @@ jobs:
           done
           
           # Clean up the array to be a plain space-separated string
-          versions_to_release_json=$(echo "[\"${versions_to_release[@]// /\",\"}\"]" | tr -d '[:space:]')
+          versions_to_release_json=$(printf '"%s", ' "${versions_to_release[@]}" | sed 's/, $//')
+          versions_to_release_json="[$versions_to_release_json]"
           echo "versions_to_release_json=$versions_to_release_json"  # Debugging step
           echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
 
