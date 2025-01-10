@@ -47,13 +47,25 @@ jobs:
           echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
 
   trigger-release:
+    runs-on: ubuntu-latest
     needs: get-envoy-versions
     strategy:
       matrix:
-        version: ${{ needs.get-envoy-versions.outputs.versions_to_release }}
+        version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
       fail-fast: false
-    uses: ./.github/workflows/build-and-release.yaml
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-    with:
-      version: ${{ matrix.version }}
+    steps:
+      - name: Delay to not use allocated host for OSX
+        run: |
+          version_list=(${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }})
+          for i in "${!version_list[@]}"; do
+            if [[ "${version_list[$i]}" == "${{ matrix.version }}" ]]; then
+              echo "Matrix entry index is $i"
+              sleep $((i * 60))  # Correct arithmetic expansion for delay
+            fi
+          done
+      # - name: Trigger workflow
+      #   uses: ./.github/workflows/build-and-release.yaml
+      #   with:
+      #     version: ${{ matrix.version }}
