@@ -13,7 +13,7 @@ jobs:
   get-envoy-versions:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ github.token }}  # Ensure the GH_TOKEN is available for the API calls
+      GH_TOKEN: ${{ github.token }}
     outputs:
       versions_to_release: ${{ steps.get-versions-to-release.outputs.versions_to_release }}
     steps:
@@ -21,8 +21,7 @@ jobs:
         id: check-envoy-released-versions
         run: |
           envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (30 * 24 * 3600)) | .tag_name')
-          envoy_versions_str=$(echo $envoy_versions | tr '\n' ' ')
-          echo "envoy_versions=$envoy_versions_str" >> $GITHUB_OUTPUT
+          echo "envoy_versions=$envoy_versions" >> $GITHUB_OUTPUT
 
       - name: Get Envoy versions to release
         id: get-versions-to-release
@@ -40,23 +39,22 @@ jobs:
               echo "Envoy $version already released, skip"
             fi
           done
-          # Create a newline-separated list of versions
-          versions_to_release_list=$(printf "%s\n" "${versions_to_release[@]}")
-          echo $versions_to_release_list
-          echo "versions_to_release=$versions_to_release_list" >> $GITHUB_ENV
+          # Create a JSON array
+          versions_to_release_json=$(printf '%s\n' "${versions_to_release[@]}" | jq -R . | jq -s .)
+          echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
 
   trigger-release:
-    runs-on: ubuntu-latest
     needs: get-envoy-versions
-    if: ${{ needs.get-envoy-versions.outputs.versions_to_release != '' }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: ${{ needs.get-envoy-versions.outputs.versions_to_release }}
+        version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
       fail-fast: false
     steps:
       - name: Test Matrix Version
         run: |
           echo "Processing version: ${{ matrix.version }}"
+
   # trigger-release:
   #   needs: get-envoy-versions
   #   strategy:
