@@ -21,7 +21,8 @@ jobs:
         id: check-envoy-released-versions
         run: |
           envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (30 * 24 * 3600)) | .tag_name')
-          echo "envoy_versions=$envoy_versions" >> $GITHUB_OUTPUT
+          envoy_versions_str=$(echo $envoy_versions | tr '\n' ' ')
+          echo "envoy_versions=$envoy_versions_str" >> $GITHUB_OUTPUT
 
       - name: Get Envoy versions to release
         id: get-versions-to-release
@@ -39,10 +40,9 @@ jobs:
               echo "Envoy $version already released, skip"
             fi
           done
-          # Create a JSON array
+          # Convert the array to a JSON list format
           versions_to_release_json=$(printf '%s\n' "${versions_to_release[@]}" | jq -R . | jq -s .)
           echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
-
   trigger-release:
     needs: get-envoy-versions
     runs-on: ubuntu-latest
