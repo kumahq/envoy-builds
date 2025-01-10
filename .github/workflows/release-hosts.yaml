@@ -32,13 +32,15 @@ jobs:
           for envoy_version in "${envoy_versions[@]}"; do
             echo "Checking if $envoy_version has been already released"
             version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
-            if [ -z "$version" ]; then
-              echo "No version found for $envoy_version"
-              version_without_v=$(echo "$envoy_version" | sed 's/^v//')
-              versions_to_release+=("$version_without_v")  # Add quotes for JSON compliance
-            else
-              echo "Envoy $version already released, skip"
-            fi
+            # if [ -z "$version" ]; then
+            #   echo "No version found for $envoy_version"
+            #   version_without_v=$(echo "$envoy_version" | sed 's/^v//')
+            #   versions_to_release+=("$version_without_v")  # Add quotes for JSON compliance
+            # else
+            #   echo "Envoy $version already released, skip"
+            # fi
+            version_without_v=$(echo "$envoy_version" | sed 's/^v//')
+            versions_to_release+=("$version_without_v")  # Add quotes for JSON compliance
           done
           
           # Clean up the array to be a plain space-separated string
