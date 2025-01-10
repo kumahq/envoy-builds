@@ -58,8 +58,10 @@ jobs:
     steps:
       - name: Delay to not use allocated host for OSX
         run: |
-          version_list=(${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }})
+          eval "version_list=(${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }})"
+          echo $version_list[@]
           for i in "${!version_list[@]}"; do
+            echo "Matrix entry index is $i"
             if [[ "${version_list[$i]}" == "${{ matrix.version }}" ]]; then
               echo "Matrix entry index is $i"
               sleep $((i * 60))  # Correct arithmetic expansion for delay
