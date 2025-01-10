@@ -56,6 +56,9 @@ jobs:
         version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
       fail-fast: false
     steps:
+      - name: Debug Output of versions_to_release
+        run: |
+          echo "versions_to_release: ${{ needs.get-envoy-versions.outputs.versions_to_release }}"
       - name: Test Matrix Version
         run: |
           echo "Processing version: ${{ matrix.version }}"
