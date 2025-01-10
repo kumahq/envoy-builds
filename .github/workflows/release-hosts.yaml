@@ -1,4 +1,4 @@
-name: 'Build on Release'
+name: 'Build and Release on Schedule'
 
 on:
   schedule:
@@ -32,48 +32,28 @@ jobs:
           for envoy_version in "${envoy_versions[@]}"; do
             echo "Checking if $envoy_version has been already released"
             version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
-            # if [ -z "$version" ]; then
-            #   echo "No version found for $envoy_version"
-            #   version_without_v=$(echo "$envoy_version" | sed 's/^v//')
-            #   versions_to_release+=("\"$version_without_v\"")  # Add quotes for JSON compliance
-            # else
-            #   echo "Envoy $version already released, skip"
-            #   version_without_v=$(echo "$envoy_version" | sed 's/^v//')
-            #   versions_to_release+=("\"$version_without_v\"")  # Add quotes for JSON compliance
-            # fi
-            version_without_v=$(echo "$envoy_version" | sed 's/^v//')
-            versions_to_release+=("$version_without_v")  # Add quotes for JSON compliance
+            if [ -z "$version" ]; then
+              echo "No version found for $envoy_version"
+              version_without_v=$(echo "$envoy_version" | sed 's/^v//')
+              versions_to_release+=("$version_without_v")  # Add quotes for JSON compliance
+            else
+              echo "Envoy $version already released, skip"
+            fi
           done
           
           # Clean up the array to be a plain space-separated string
           versions_to_release_json=$(printf '"%s", ' "${versions_to_release[@]}" | sed 's/, $//')
           versions_to_release_json="[$versions_to_release_json]"
-          echo "versions_to_release_json=$versions_to_release_json"  # Debugging step
           echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
 
   trigger-release:
     needs: get-envoy-versions
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
+        version: ${{ needs.get-envoy-versions.outputs.versions_to_release }}
       fail-fast: false
-    steps:
-      - name: Debug Output of versions_to_release
-        run: |
-          echo "versions_to_release: ${{ needs.get-envoy-versions.outputs.versions_to_release }}"
-      - name: Test Matrix Version
-        run: |
-          echo "Processing version: ${{ matrix.version }}"
-
-  # trigger-release:
-  #   needs: get-envoy-versions
-  #   strategy:
-  #     matrix:
-  #       version: ${{ needs.get-envoy-versions.outputs.versions_to_release }}
-  #     fail-fast: false
-  #   uses: ./.github/workflows/build-and-release.yaml
-  #   secrets:
-  #     AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  #   with:
-  #     version: ${{ matrix.version }}
+    uses: ./.github/workflows/build-and-release.yaml
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    with:
+      version: ${{ matrix.version }}
