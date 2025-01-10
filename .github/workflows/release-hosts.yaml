@@ -46,8 +46,10 @@ jobs:
           done
           
           # Clean up the array to be a plain space-separated string
-          versions_to_release_json=$(echo "$versions_to_release_json" | tr -d '[:space:]')
+          versions_to_release_json=$(echo "$versions_to_release" | tr -d '[:space:]')
+          echo "versions_to_release_json=$versions_to_release_json"  # Debugging step
           echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
+
   trigger-release:
     needs: get-envoy-versions
     runs-on: ubuntu-latest
