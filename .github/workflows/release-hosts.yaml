@@ -41,7 +41,7 @@ jobs:
             fi
           done
           # Create a valid JSON array using jq
-          versions_to_release_json=$(echo "${versions_to_release[@]}" | jq -R -s -c 'split(" ")')
+          versions_to_release_json=$(echo "${versions_to_release[@]}" | jq -R -s -c 'split(" ")' | tr -d '\n')
           echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
 
   trigger-release:
