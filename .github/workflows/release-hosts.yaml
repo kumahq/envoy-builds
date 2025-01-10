@@ -50,7 +50,7 @@ jobs:
     needs: get-envoy-versions
     strategy:
       matrix:
-        version: ${{ needs.get-envoy-versions.outputs.versions_to_release }}
+        version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
       fail-fast: false
     uses: ./.github/workflows/build-and-release.yaml
     secrets:
