@@ -38,6 +38,8 @@ jobs:
               versions_to_release+=("\"$version_without_v\"")  # Add quotes for JSON compliance
             else
               echo "Envoy $version already released, skip"
+              version_without_v=$(echo "$envoy_version" | sed 's/^v//')
+              versions_to_release+=("\"$version_without_v\"")  # Add quotes for JSON compliance
             fi
           done
           # Clean up the array to be a plain space-separated string
