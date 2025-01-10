@@ -1,0 +1,61 @@
+name: 'Build and Release on Schedule'
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Scheduled at 00:00 every day
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  get-envoy-versions:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    outputs:
+      versions_to_release: ${{ steps.get-versions-to-release.outputs.versions_to_release }}
+    steps:
+      - name: Check Envoy released versions
+        id: check-envoy-released-versions
+        run: |
+          # Check if there are releases published in 24 hours
+          envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (24 * 3600)) | .tag_name')
+          envoy_versions_str=$(echo $envoy_versions | tr '\n' ' ')
+          echo "envoy_versions=$envoy_versions_str" >> $GITHUB_OUTPUT
+
+      - name: Get Envoy versions to release
+        id: get-versions-to-release
+        run: |
+          versions_to_release=()
+          eval "envoy_versions=(${{ steps.check-envoy-released-versions.outputs.envoy_versions }})"
+          for envoy_version in "${envoy_versions[@]}"; do
+            echo "Checking if $envoy_version has been already released"
+            version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
+            if [ -z "$version" ]; then
+              echo "No version found for $envoy_version"
+              version_without_v=$(echo "$envoy_version" | sed 's/^v//')
+              versions_to_release+=("$version_without_v")  # Add quotes for JSON compliance
+            else
+              echo "Envoy $version already released, skip"
+            fi
+          done
+          
+          # Clean up the array to be a plain space-separated string
+          versions_to_release_json=$(printf '"%s", ' "${versions_to_release[@]}" | sed 's/, $//')
+          versions_to_release_json="[$versions_to_release_json]"
+          echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
+
+  trigger-release:
+    uses: ./.github/workflows/build-and-release.yaml
+    needs: get-envoy-versions
+    strategy:
+      max-parallel: 1 # lets build one version at the time - potential issue, if more jobs try to run at the same time they might try to allocate host that is used by other job and fail build
+      matrix:
+        version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
+      fail-fast: false
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    with:
+      version: ${{ matrix.version }}

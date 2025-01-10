@@ -2,6 +2,16 @@ name: Build and release
 run-name: "Build ${{ !inputs.skip-release && 'and release ' || '' }}v${{ inputs.version }}${{ inputs.suffix }}"
 
 on:
+  workflow_call:
+    inputs:
+      version:
+        description: Envoy version to build (don't include leading v)
+        type: string
+        required: true
+    secrets:
+      AWS_ACCOUNT_ID:
+        description: AWS account ID for infrastructure
+        required: true
   workflow_dispatch:
     inputs:
       version:
