@@ -40,9 +40,9 @@ jobs:
               echo "Envoy $version already released, skip"
             fi
           done
-          # Convert the array to a JSON list format
-          versions_to_release_json=$(printf '%s\n' "${versions_to_release[@]}" | jq -R . | jq -s .)
-          echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
+          # Clean up the array to be a plain space-separated string
+          versions_to_release_str=$(echo "${versions_to_release[@]}" | tr ' ' '\n' | sed 's/^v//g' | tr '\n' ' ' | sed 's/ $//')
+          echo "versions_to_release=$versions_to_release_str" >> $GITHUB_OUTPUT
   trigger-release:
     needs: get-envoy-versions
     runs-on: ubuntu-latest
