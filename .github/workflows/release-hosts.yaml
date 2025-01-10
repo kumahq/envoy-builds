@@ -42,6 +42,7 @@ jobs:
           done
           # Create a newline-separated list of versions
           versions_to_release_list=$(printf "%s\n" "${versions_to_release[@]}")
+          echo $versions_to_release_list
           echo "versions_to_release=$versions_to_release_list" >> $GITHUB_ENV
 
   trigger-release:
