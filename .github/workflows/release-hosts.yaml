@@ -59,9 +59,9 @@ jobs:
       - name: Debug Output of versions_to_release
         run: |
           echo "versions_to_release: ${{ needs.get-envoy-versions.outputs.versions_to_release }}"
-      - name: Test Matrix Version
-        run: |
-          echo "Processing version: ${{ matrix.version }}"
+      # - name: Test Matrix Version
+      #   run: |
+      #     echo "Processing version: ${{ matrix.version }}"
 
   # trigger-release:
   #   needs: get-envoy-versions
