@@ -73,10 +73,9 @@ jobs:
               sleep $((i * 60))  # Correct arithmetic expansion for delay
             fi
           done
-      - name: test
-        run: |
-          echo ${{ matrix.version }}
-      # - name: Trigger workflow
-      #   uses: ./.github/workflows/build-and-release.yaml
-      #   with:
-      #     version: ${{ matrix.version }}
+      - name: Trigger workflow
+        uses: ./.github/workflows/build-and-release.yaml
+        with:
+          version: ${{ matrix.version }}
+        secrets:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}  # Pass the secret from the caller workflow
