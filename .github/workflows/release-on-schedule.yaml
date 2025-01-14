@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   get-envoy-versions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
     outputs:
@@ -49,6 +49,7 @@ jobs:
 
   trigger-release:
     uses: ./.github/workflows/build-and-release.yaml
+    if: ${{ needs.get-envoy-versions.outputs.versions_to_release != '[]' }}
     needs: get-envoy-versions
     strategy:
       max-parallel: 1 # lets build one version at the time - potential issue, if more jobs try to run at the same time they might try to allocate host that is used by other job and fail build

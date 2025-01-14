@@ -34,7 +34,7 @@ permissions:
 
 jobs:
   check-input:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Fail if version starts with "v"
         id: check-v
@@ -72,7 +72,7 @@ jobs:
       fips: ${{ matrix.fips == 'fips' }}
       version: ${{ inputs.version || 'main' }}
   package:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: Download all workflow run artifacts

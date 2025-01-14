@@ -57,7 +57,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     if: inputs.os != 'windows' || (!startsWith(inputs.version, '1.3') && inputs.version != 'main')
     steps:
