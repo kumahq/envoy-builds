@@ -38,7 +38,7 @@ permissions to run the terraform.
 
 ### Verifying which version of glibc Envoy requires
 
-Run:
+Run (objdump requires `binutils-multiarch`):
 
 ```bash
 objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu | tail -1
