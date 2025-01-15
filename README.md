@@ -36,6 +36,26 @@ permissions to run the terraform.
 
 ## Bundling with a custom glibc
 
+### Verifying which version of glibc Envoy requires
+
+Run (objdump requires `binutils-multiarch`):
+
+```bash
+objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu | tail -1
+```
+
+in a directory where Envoy binary is located.
+This should spit out something like this:
+
+```bash
+root@5b91c156c2ac:/tmp/kong-mesh-2.7.9/bin# objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu | tail -1
+2.30
+```
+
+Which means that glibc version `>= 2.30` is required.
+
+### Bundling process
+
 Some OS-es (CentOS 7, RHEL 8.8) have older versions of glibc that won't work with Envoy,
 and will result in errors similar to this one:
 
