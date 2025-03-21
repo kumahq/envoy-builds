@@ -76,17 +76,17 @@ jobs:
     needs: build
     steps:
       - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
       - run: |
           mkdir out
           for dir in envoy*; do
-            IFS=- read -r envoy os arch fips <<< "${dir}"
+            IFS=- read -r envoy os arch version fips <<< "${dir}"
             for bin in "${dir}"/*; do
               chmod +x "${bin}"
 
               bin="$(basename "${bin}")"
               IFS=- read -r envoy suffix <<< "${bin}"
-              archive_name="envoy-${os}-${arch}-v${{ inputs.version }}${{ inputs.suffix }}"
+              archive_name="envoy-${os}-${arch}-v${version}${{ inputs.suffix }}"
               if [[ "${fips}" == "true" ]]; then
                 archive_name="${archive_name}+fips"
               fi
@@ -97,13 +97,13 @@ jobs:
           done
       - name: Release
         if: ${{ !inputs.skip-release }}
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
         with:
           tag_name: v${{ inputs.version || 'main' }}${{ inputs.suffix }}
           draft: true
           files: |
             out/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: envoy-v${{ inputs.version }}${{ inputs.suffix }}
           path: out/
