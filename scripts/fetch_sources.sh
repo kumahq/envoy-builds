@@ -19,6 +19,7 @@ patches_per_version[v1.31]="$(realpath "patches/v1.31-0001-dns-don-t-error-if-he
 patches_per_version[v1.32]="$()"
 patches_per_version[v1.33]="$()"
 patches_per_version[v1.34]="$()"
+patches_per_version[v1.35]="$()"
 
 PATCH_FILES_1_26=(
   "$(realpath "scripts/dns_filter_resolver.h.patch")"
