@@ -6,10 +6,11 @@ variable "host_id" {
 
 locals {
   macos_version = (
-    startswith(var.envoy_version, "1.26")
-    || startswith(var.envoy_version, "1.27")
-    || startswith(var.envoy_version, "1.28")
-  ) ? 11 : 12
+    startswith(var.envoy_version, "1.31")
+    || startswith(var.envoy_version, "1.32")
+    || startswith(var.envoy_version, "1.33")
+    || startswith(var.envoy_version, "1.34")
+  ) ? 12 : 13
   macos_user_data = <<EOF
 #!/bin/bash
 set -e
