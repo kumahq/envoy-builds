@@ -128,7 +128,12 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_aws ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
             set -e
-            if [[ "${{ inputs.os }}" == darwin && "${{ inputs.version }}" == "main" ]]; then
+            minor_version=""
+            if [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+              # If the version string matches a numeric format (X.Y or X.Y.Z)
+              minor_version=$(echo "${{ inputs.version }}" | cut -d'.' -f2)
+            fi
+            if [[ "${{ inputs.os }}" == "darwin" && ( "${{ inputs.version }}" == "main" || ( -n "$minor_version" && "$minor_version" -gt "34" )) ]]; then
               export PATH="/opt/homebrew/bin:$PATH"
               export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
             fi
