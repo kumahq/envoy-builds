@@ -33,5 +33,5 @@ EOF
 }
 
 data "aws_ssm_parameter" "debian" {
-  name = "/aws/service/debian/release/11/latest/${var.arch}"
+  name = "/aws/service/debian/release/12/latest/${var.arch}"
 }
