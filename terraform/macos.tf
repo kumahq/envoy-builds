@@ -9,7 +9,7 @@ locals {
     startswith(var.envoy_version, "1.32")
     || startswith(var.envoy_version, "1.33")
     || startswith(var.envoy_version, "1.34")
-  ) ? 14 : 14
+  ) ? 12 : 14
   macos_user_data = <<EOF
 #!/bin/bash
 set -e
@@ -17,6 +17,7 @@ set -e
 sudo -u ec2-user -i <<SUDOEOF
 echo "alias python=python3" >> ~/.bash_profile
 # Using && is apparently necessary to ensure touch runs. Do not modify without testing!
+brew install bash automake cmake coreutils libtool wget ninja go && brew reinstall --force bazelisk
 brew install bash automake cmake coreutils libtool wget ninja go && brew reinstall --force bazelisk && touch ~/ready
 SUDOEOF
 EOF
