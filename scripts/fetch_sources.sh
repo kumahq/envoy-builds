@@ -17,6 +17,7 @@ patches_per_version[v1.33]="$()"
 patches_per_version[v1.34]="$()"
 patches_per_version[v1.35]="$()"
 patches_per_version[v1.36]="$()"
+patches_per_version[v1.37]="$()"
 
 DARWIN_PATCH_FILE=$(realpath "scripts/luajit.patch.patch")
 
