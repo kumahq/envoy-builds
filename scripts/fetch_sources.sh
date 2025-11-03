@@ -46,7 +46,7 @@ echo "Checking for patches"
 IFS=. read -r major minor rest <<< "$(cat VERSION.txt)"
 if [[ "${GOOS}" == "darwin" && ${minor} -gt 36 ]]; then
   echo "Applying patches for Darwin"
-  git apply -v "v1.37-0001-patch-lua.patch"
+  # git apply -v "v1.37-0001-patch-lua.patch"
 else
   echo "Applying patches for Darwin"
   git apply -v "${DARWIN_PATCH_FILE}"
