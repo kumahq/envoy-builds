@@ -43,12 +43,15 @@ echo "ENVOY_TAG=${ENVOY_TAG}"
 
 echo "Checking for patches"
 
-if [[ "${GOOS}" == "darwin" ]]; then
+IFS=. read -r major minor rest <<< "$(cat VERSION.txt)"
+if [[ "${GOOS}" == "darwin" && ${minor} -gt 36 ]]; then
+  echo "Applying patches for Darwin"
+  git apply -v "v1.37-0001-patch-lua.patch"
+else
   echo "Applying patches for Darwin"
   git apply -v "${DARWIN_PATCH_FILE}"
 fi
 
-IFS=. read -r major minor rest <<< "$(cat VERSION.txt)"
 patches=${patches_per_version["v${major}.${minor}"]}
 # read string into array because lists of lists is too much for bash
 if [[ -n "${patches[@]}" ]]; then
