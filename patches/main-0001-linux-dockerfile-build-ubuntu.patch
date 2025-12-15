@@ -1,0 +1,11 @@
+diff --git a/scripts/Dockerfile.build-ubuntu b/scripts/Dockerfile.build-ubuntu
+index ec6f185..6fb02f6 100644
+--- a/scripts/Dockerfile.build-ubuntu
++++ b/scripts/Dockerfile.build-ubuntu
+@@ -12,6 +12,5 @@ RUN groupadd --gid 777 -f envoygroup \
+ 
+ COPY --chown=envoybuild:envoygroup . /envoy-sources/
+ 
+-RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources && bazel/setup_clang.sh /opt/llvm"
+ RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources && $BUILD_CMD"
+ RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources/bazel-bin/contrib/exe && strip envoy-static -o envoy"
