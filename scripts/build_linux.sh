@@ -11,6 +11,15 @@ mkdir -p "$(dirname "${BINARY_PATH}")"
 SOURCE_DIR="${SOURCE_DIR}" "scripts/fetch_sources.sh"
 CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "scripts/contrib_enabled_matrix.py")
 
+# Define Dockerfile patches per OS and version
+declare -A patch_per_version
+patch_per_version[main]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
+patch_per_version[v1.33]="$()"
+patch_per_version[v1.34]="$()"
+patch_per_version[v1.35]="$()"
+patch_per_version[v1.36]="$()"
+patch_per_version[v1.37]="$()"
+
 BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS:-""}
 read -ra BAZEL_BUILD_EXTRA_OPTIONS <<< "${BAZEL_BUILD_EXTRA_OPTIONS}"
 BAZEL_BUILD_OPTIONS=(
@@ -32,6 +41,26 @@ ENVOY_BUILD_IMAGE="envoyproxy/envoy-build-ubuntu:${ENVOY_BUILD_TAG}"
 LOCAL_BUILD_IMAGE="envoy-builder:${ENVOY_TAG}"
 
 echo "BUILD_CMD=${BUILD_CMD}"
+
+# Determine version key from ENVOY_TAG for patch lookup
+if [[ "${ENVOY_TAG}" == "main" || "${ENVOY_TAG}" == "master" ]]; then
+  VERSION_KEY="${ENVOY_TAG}"
+else
+  # Extract major.minor from version tag (e.g., v1.35.8 -> v1.35)
+  IFS=. read -r major minor rest <<< "${ENVOY_TAG}"
+  VERSION_KEY="${major}.${minor}"
+fi
+
+echo "ENVOY_TAG=${ENVOY_TAG}, VERSION_KEY=${VERSION_KEY}"
+
+echo "Checking for Dockerfile patches"
+if [[ -v patch_per_version["${VERSION_KEY}"] ]]; then
+  patches=${patch_per_version["${VERSION_KEY}"]}
+  if [[ -n "${patches}" ]]; then
+    echo "Applying Dockerfile patch for ${VERSION_KEY}"
+    patch "scripts/Dockerfile.build-ubuntu" < "${patches}"
+  fi
+fi
 
 docker build -t "${LOCAL_BUILD_IMAGE}" --progress=plain \
   --build-arg ENVOY_BUILD_IMAGE="${ENVOY_BUILD_IMAGE}" \
