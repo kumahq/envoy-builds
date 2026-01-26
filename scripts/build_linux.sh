@@ -18,7 +18,7 @@ patch_per_version[v1.33]="$()"
 patch_per_version[v1.34]="$()"
 patch_per_version[v1.35]="$()"
 patch_per_version[v1.36]="$()"
-patch_per_version[v1.37]="$()"
+patch_per_version[v1.37]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
 
 BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS:-""}
 read -ra BAZEL_BUILD_EXTRA_OPTIONS <<< "${BAZEL_BUILD_EXTRA_OPTIONS}"
