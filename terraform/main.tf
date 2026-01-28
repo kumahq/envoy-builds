@@ -23,10 +23,10 @@ variable "arch" {
 
 variable "os" {
   type        = string
-  description = "linux or darwin or windows"
+  description = "linux or darwin"
   validation {
-    condition     = contains(["linux", "darwin", "windows"], var.os)
-    error_message = "linux or darwin or windows"
+    condition     = contains(["linux", "darwin"], var.os)
+    error_message = "linux or darwin"
   }
 }
 
@@ -45,7 +45,6 @@ locals {
   ami = {
     linux = data.aws_ssm_parameter.debian.value
     darwin = data.aws_ami.mac.image_id
-    windows = data.aws_ssm_parameter.windows.value
   }
   instance_type = {
     darwin = {
@@ -56,14 +55,10 @@ locals {
       amd64 = "c6i.4xlarge"
       arm64 = "c7g.4xlarge"
     }
-    windows = {
-      amd64 = "c6i.4xlarge"
-    }
   }
   user_data = {
     linux = local.linux_user_data
     darwin = local.macos_user_data
-    windows = local.windows_user_data
   }
 }
 

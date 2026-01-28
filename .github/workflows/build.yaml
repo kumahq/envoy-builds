@@ -42,7 +42,6 @@ on:
         options:
           - darwin
           - linux
-          - windows
         description: OS to build Envoy for
         type: choice
         required: true
@@ -59,17 +58,13 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
-    if: inputs.os != 'windows' || (!startsWith(inputs.version, '1.3') && inputs.version != 'main')
+    if: (!startsWith(inputs.version, '1.3') && inputs.version != 'main')
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # TODO use aws ssm
       - name: Generate SSH key
         run: |
-          if [[ "${{ inputs.os }}" == windows ]]; then
-            ssh-keygen -t rsa -b 4096 -q -N "" -f ~/.ssh/id_aws
-          else
-            ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_aws
-          fi
+          ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_aws
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
@@ -115,16 +110,11 @@ jobs:
         working-directory: terraform
         timeout-minutes: 90
         run: |
-          if [[ "${{ inputs.os }}" == windows ]]; then
-            ./wait-windows-host.sh '${{ steps.instance-id.outputs.stdout }}'
-          else
-            while ! timeout 10 ssh -i ~/.ssh/id_aws -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
-            do
-              sleep 5
-            done
-          fi
+          while ! timeout 10 ssh -i ~/.ssh/id_aws -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
+          do
+            sleep 5
+          done
       - name: Build Envoy
-        if: inputs.os != 'windows'
         run: |
           ssh -i ~/.ssh/id_aws ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
             set -e
@@ -155,26 +145,10 @@ jobs:
 
             mv build ..
           EOF
-      - name: Build Envoy Windows
-        if: inputs.os == 'windows'
-        working-directory: terraform
-        run: ./build-windows.sh '${{ steps.instance-id.outputs.stdout }}' '${{ inputs.version }}'
       - name: Download Envoy binaries
         run: |
-          if [[ ${{ inputs.os }} == windows ]]; then
-            if [[ ${{ inputs.version }} == main ]]; then
-              version=main
-            else
-              version=v${{ inputs.version }}
-            fi
-            mkdir envoy
-            aws s3 cp s3://envoy-windows-binary/envoy_binary_$version.tar.gz .
-            tar xzf envoy_binary_$version.tar.gz
-            mv envoy.exe envoy/envoy-$version
-          else
             envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
             scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
-          fi
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
