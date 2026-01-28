@@ -17,8 +17,7 @@ set -e
 sudo -u ec2-user -i <<SUDOEOF
 echo "alias python=python3" >> ~/.bash_profile
 # Using && is apparently necessary to ensure touch runs. Do not modify without testing!
-brew install bash automake cmake coreutils libtool wget ninja go llvm@18 && brew reinstall --force bazelisk && touch ~/ready
-ln -s /usr/bin/libtool /usr/local/Cellar/llvm@18/18.1.8/bin/libtool
+brew install bash automake cmake coreutils libtool wget ninja go llvm@18 && brew reinstall --force bazelisk && ln -sf /usr/bin/libtool "$(brew --prefix llvm@18)/bin/libtool" && touch ~/ready
 SUDOEOF
 EOF
 }
