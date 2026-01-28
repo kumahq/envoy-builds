@@ -49,14 +49,12 @@ jobs:
     needs: check-input
     strategy:
       matrix:
-        os: [darwin, linux, windows]
+        os: [darwin, linux]
         arch: [arm64, amd64]
         fips: ['', 'fips']
         exclude:
-          - os: windows
-            fips: fips
-          - os: windows
-            arch: arm64
+          - os: darwin
+            arch: amd64
           - os: darwin
             fips: fips
           - os: linux

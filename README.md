@@ -20,7 +20,7 @@ in a VM.
 ### Github workflow
 
 Run the `build-and-release.yaml` workflow with desired version of envoy without leading `v` (`1.29.7`) to build binaries
-for linux/darwin amd64/arm64 and additionally a FIPS version for linux/amd64, windows amd64 and publish a _draft
+for linux/darwin amd64/arm64 and additionally a FIPS version for linux/amd64 and publish a _draft
 Github release_.
 
 ### Limitations
