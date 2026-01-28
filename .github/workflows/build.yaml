@@ -122,13 +122,15 @@ jobs:
               # If the version string matches a numeric format (X.Y or X.Y.Z)
               minor_version=$(echo "${{ inputs.version }}" | cut -d'.' -f2)
             fi
-            if [[ "${{ inputs.os }}" == "darwin" && ( "${{ inputs.version }}" == "main" || ( -n "$minor_version" && "$minor_version" -gt "34" )) ]]; then
+            if [[ "${{ inputs.os }}" == "darwin" ]]; then
               export PATH="/opt/homebrew/bin:$PATH"
-              export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
-            fi
-            if [[ "${{ inputs.os }}" == darwin && "${{ inputs.version }}" != "main" && ( -n "$minor_version" && "$minor_version" -lt "35" ) ]]; then
-              export PATH="/opt/homebrew/bin:$PATH"
-              export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
+              if [[ "${{ inputs.version }}" == "main" || ( -n "$minor_version" && "$minor_version" -gt "34" ) ]]; then
+                BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
+                [[ "${{ inputs.arch }}" == "amd64" ]] && BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=/usr/local/Cellar/llvm@18/18.1.8/"
+                export BAZEL_BUILD_EXTRA_OPTIONS
+              elif [[ -n "$minor_version" && "$minor_version" -lt "35" ]]; then
+                export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
+              fi
             fi
 
             export ENVOY_VERSION="${{ inputs.version }}"
