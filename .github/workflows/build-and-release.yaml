@@ -54,8 +54,6 @@ jobs:
         fips: ['', 'fips']
         exclude:
           - os: darwin
-            arch: amd64
-          - os: darwin
             fips: fips
           - os: linux
             arch: arm64

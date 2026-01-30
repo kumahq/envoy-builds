@@ -14,10 +14,11 @@ locals {
 #!/bin/bash
 set -e
 
-sudo -u ec2-user -i <<SUDOEOF
+sudo -u ec2-user -i <<'SUDOEOF'
 echo "alias python=python3" >> ~/.bash_profile
 # Using && is apparently necessary to ensure touch runs. Do not modify without testing!
-brew install bash automake cmake coreutils libtool wget ninja go && brew reinstall --force bazelisk && touch ~/ready
+brew install llvm@18 && ln -sf "$(brew --prefix llvm@18)/bin/llvm-libtool-darwin" "$(brew --prefix llvm@18)/bin/libtool" 
+brew install bash automake cmake coreutils libtool wget ninja go  && brew reinstall --force bazelisk && touch ~/ready
 SUDOEOF
 EOF
 }
