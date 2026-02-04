@@ -17,8 +17,7 @@ set -e
 sudo -u ec2-user -i <<'SUDOEOF'
 trap 'touch ~/ready' EXIT
 echo "alias python=python3" >> ~/.bash_profile
-brew install llvm@18 && ln -sf "$(brew --prefix llvm@18)/bin/llvm-libtool-darwin" "$(brew --prefix llvm@18)/bin/libtool"
-brew install bash automake cmake coreutils libtool wget ninja go bazelisk
+brew install llvm@18 && ln -sf "$(brew --prefix llvm@18)/bin/llvm-libtool-darwin" "$(brew --prefix llvm@18)/bin/libtool" && brew install bash automake cmake coreutils libtool wget ninja go bazelisk
 SUDOEOF
 EOF
 }
