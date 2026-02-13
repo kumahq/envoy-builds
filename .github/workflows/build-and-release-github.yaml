@@ -1,0 +1,180 @@
+name: Build and release (GitHub runners)
+run-name: "Build ${{ !inputs.skip-release && 'and release ' || '' }}v${{ inputs.version }}${{ inputs.suffix }}"
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Envoy version to build (don't include leading v)
+        type: string
+        required: true
+      suffix:
+        description: Additional suffix for release/tag (must include leading '-' if desired)
+        type: string
+      skip-release:
+        description: Skip the release?
+        type: boolean
+        required: false
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Envoy version to build (don't include leading v)
+        type: string
+        required: true
+      suffix:
+        description: Additional suffix for release/tag (must include leading '-' if desired)
+        type: string
+      skip-release:
+        description: Skip the release?
+        type: boolean
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  check-input:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail if version starts with "v"
+        run: |
+          VERSION=${{ inputs.version }}
+          if [[ $VERSION == v* ]]; then
+            echo "Run this action without 'v' prefix - ${VERSION:1}"
+            exit 1
+          fi
+        shell: bash
+
+  build:
+    needs: check-input
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            fips: false
+            runner: ubuntu-24.04
+          - os: linux
+            arch: arm64
+            fips: false
+            runner: ubuntu-24.04-arm
+          - os: linux
+            arch: amd64
+            fips: true
+            runner: ubuntu-24.04
+          - os: darwin
+            arch: arm64
+            fips: false
+            runner: macos-15-xlarge
+          - os: darwin
+            arch: amd64
+            fips: false
+            runner: macos-13-xlarge
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Free disk space on Linux runners (~30GB recovered)
+      - name: Free disk space
+        if: matrix.os == 'linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          docker system prune -af || true
+          df -h
+
+      # macOS: install build dependencies
+      - name: Install macOS dependencies
+        if: matrix.os == 'darwin'
+        run: |
+          brew install llvm@18 bash automake cmake coreutils libtool wget ninja go bazelisk
+
+      # macOS: create libtool symlink for LLVM
+      - name: Create LLVM libtool symlink
+        if: matrix.os == 'darwin'
+        run: |
+          LLVM_PREFIX="$(brew --prefix llvm@18)"
+          if [[ ! -f "${LLVM_PREFIX}/bin/libtool" ]]; then
+            ln -sf "${LLVM_PREFIX}/bin/llvm-libtool-darwin" "${LLVM_PREFIX}/bin/libtool"
+          fi
+
+      # macOS: compute Bazel options based on version and architecture
+      - name: Set macOS Bazel options
+        if: matrix.os == 'darwin'
+        run: |
+          minor_version=""
+          if [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            minor_version=$(echo "${{ inputs.version }}" | cut -d'.' -f2)
+          fi
+
+          BAZEL_BUILD_EXTRA_OPTIONS=""
+          if [[ "${{ inputs.version }}" == "main" || ( -n "$minor_version" && "$minor_version" -gt "34" ) ]]; then
+            BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
+            if [[ "${{ matrix.arch }}" == "amd64" ]]; then
+              BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=$(brew --prefix llvm@18)/"
+            fi
+          elif [[ -n "$minor_version" && "$minor_version" -lt "35" ]]; then
+            BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
+          fi
+
+          echo "BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS}" >> "$GITHUB_ENV"
+
+      - name: Build Envoy
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          ENVOY_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "${{ matrix.fips }}" == "true" ]]; then
+            make build/envoy/fips
+          else
+            make build/envoy
+          fi
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: envoy-${{ matrix.os }}-${{ matrix.arch }}-${{ inputs.version }}-${{ matrix.fips }}
+          path: build/artifacts-${{ matrix.os }}-${{ matrix.arch }}/envoy/
+          if-no-files-found: error
+
+  package:
+    runs-on: ubuntu-24.04
+    needs: build
+    steps:
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - run: |
+          mkdir out
+          for dir in envoy*; do
+            IFS=- read -r envoy os arch version fips <<< "${dir}"
+            for bin in "${dir}"/*; do
+              chmod +x "${bin}"
+
+              bin="$(basename "${bin}")"
+              IFS=- read -r envoy suffix <<< "${bin}"
+              archive_name="envoy-${os}-${arch}-v${version}${{ inputs.suffix }}"
+              if [[ "${fips}" == "true" ]]; then
+                archive_name="${archive_name}+fips"
+              fi
+
+              # move file into tar.gz and rename to 'envoy' in archive
+              tar -C "${dir}" "--transform=flags=r;s|${bin}|envoy|" -czvf "out/${archive_name}.tar.gz" "${bin}"
+            done
+          done
+      - name: Release
+        if: ${{ !inputs.skip-release }}
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        with:
+          tag_name: v${{ inputs.version || 'main' }}${{ inputs.suffix }}
+          draft: true
+          files: |
+            out/*
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: envoy-v${{ inputs.version }}${{ inputs.suffix }}
+          path: out/
+          if-no-files-found: error
