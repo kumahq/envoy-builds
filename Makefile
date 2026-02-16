@@ -17,9 +17,14 @@ ifneq ($(ENVOY_VERSION),main)
     ENVOY_BUILD_TAG=v$(ENVOY_VERSION)
 endif
 
+FIPS_BAZEL_OPTION := --define boringssl=fips
+ifeq ($(ENVOY_VERSION),main)
+	FIPS_BAZEL_OPTION := --config=boringssl-fips
+endif
+
 .PHONY: build/envoy/fips
 build/envoy/fips:
-	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} --define boringssl=fips" \
+	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} $(FIPS_BAZEL_OPTION)" \
 	ARTIFACT_EXT="+fips" $(MAKE) build/envoy
 
 .PHONY: build/envoy
