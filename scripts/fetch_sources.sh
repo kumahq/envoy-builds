@@ -11,7 +11,6 @@ set -o pipefail
 set -o nounset
 
 declare -A patches_per_version
-patches_per_version[v1.33]="$()"
 patches_per_version[v1.34]="$()"
 patches_per_version[v1.35]="$()"
 patches_per_version[v1.36]="$()"
@@ -19,7 +18,6 @@ patches_per_version[v1.37]="$(realpath "patches/v1.37-0001-linux-fix-afero-bazel
 patches_per_version[v1.38]="$()"
 
 declare -A patches_darwin
-patches_darwin[v1.33]="$(realpath "patches/v1.33-0001-darwin-patch-lua.patch")"
 patches_darwin[v1.34]="$(realpath "patches/v1.34-0001-darwin-patch-lua.patch")"
 patches_darwin[v1.35]="$(realpath "patches/v1.35-0001-darwin-patch-lua.patch")"
 patches_darwin[v1.36]="$(realpath "patches/v1.36-0001-darwin-patch-lua.patch")"
@@ -50,16 +48,16 @@ echo "Checking for patches"
 
 IFS=. read -r major minor rest <<< "$(cat VERSION.txt)"
 if [[ "${GOOS}" == "darwin" ]]; then
-  patches=${patches_darwin["v${major}.${minor}"]}
-  if [[ -n "${patches[@]}" ]]; then
+  patches=${patches_darwin["v${major}.${minor}"]:-""}
+  if [[ -n "${patches}" ]]; then
     read -ra patches <<< "${patches}"
     git apply -v "${patches[@]}"
   fi
 fi
 
-patches=${patches_per_version["v${major}.${minor}"]}
+patches=${patches_per_version["v${major}.${minor}"]:-""}
 # read string into array because lists of lists is too much for bash
-if [[ -n "${patches[@]}" ]]; then
+if [[ -n "${patches}" ]]; then
   read -ra patches <<< "${patches}"
   git apply -v "${patches[@]}"
 fi
