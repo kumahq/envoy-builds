@@ -42,7 +42,7 @@ jobs:
           - { os: linux,  arch: amd64, fips: false, runner: ubuntu-24.04 }
           - { os: linux,  arch: amd64, fips: true,  runner: ubuntu-24.04 }
           - { os: linux,  arch: arm64, fips: false, runner: ubuntu-24.04-arm }
-          - { os: darwin, arch: amd64, fips: false, runner: macos-13-xlarge }
+          - { os: darwin, arch: amd64, fips: false, runner: macos-14-large }
           - { os: darwin, arch: arm64, fips: false, runner: macos-15-xlarge }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
