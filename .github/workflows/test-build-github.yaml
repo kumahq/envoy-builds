@@ -1,0 +1,119 @@
+name: Test Build (GitHub runners)
+run-name: "Test build ${{ inputs.os }}-${{ inputs.arch }}-v${{ inputs.version }}${{ inputs.fips && '+fips' || '' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Envoy version to build (without leading v, or 'main')
+        type: string
+        required: true
+      os:
+        description: Target OS
+        type: choice
+        required: true
+        options:
+          - linux
+          - darwin
+      arch:
+        description: Target architecture
+        type: choice
+        required: true
+        options:
+          - amd64
+          - arm64
+      fips:
+        description: Build FIPS (linux amd64 only)
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check-input:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail if version starts with "v"
+        run: |
+          VERSION=${{ inputs.version }}
+          if [[ $VERSION == v* ]]; then
+            echo "Run this action without 'v' prefix - ${VERSION:1}"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Fail if FIPS requested for non-linux-amd64
+        if: inputs.fips == true && (inputs.os != 'linux' || inputs.arch != 'amd64')
+        run: |
+          echo "FIPS is only supported for linux/amd64"
+          exit 1
+
+  build:
+    needs: check-input
+    runs-on: ${{ inputs.os == 'darwin' && inputs.arch == 'arm64' && 'macos-15-xlarge' || inputs.os == 'darwin' && inputs.arch == 'amd64' && 'macos-13-xlarge' || inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Free disk space
+        if: inputs.os == 'linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          docker system prune -af || true
+          df -h
+
+      - name: Install macOS dependencies
+        if: inputs.os == 'darwin'
+        run: |
+          brew install llvm@18 bash automake cmake coreutils libtool wget ninja go bazelisk
+
+      - name: Create LLVM libtool symlink
+        if: inputs.os == 'darwin'
+        run: |
+          LLVM_PREFIX="$(brew --prefix llvm@18)"
+          if [[ ! -f "${LLVM_PREFIX}/bin/libtool" ]]; then
+            ln -sf "${LLVM_PREFIX}/bin/llvm-libtool-darwin" "${LLVM_PREFIX}/bin/libtool"
+          fi
+
+      - name: Set macOS Bazel options
+        if: inputs.os == 'darwin'
+        run: |
+          minor_version=""
+          if [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            minor_version=$(echo "${{ inputs.version }}" | cut -d'.' -f2)
+          fi
+
+          BAZEL_BUILD_EXTRA_OPTIONS=""
+          if [[ "${{ inputs.version }}" == "main" || ( -n "$minor_version" && "$minor_version" -gt "34" ) ]]; then
+            BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
+            if [[ "${{ inputs.arch }}" == "amd64" ]]; then
+              BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=$(brew --prefix llvm@18)/"
+            fi
+          elif [[ -n "$minor_version" && "$minor_version" -lt "35" ]]; then
+            BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
+          fi
+
+          echo "BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS}" >> "$GITHUB_ENV"
+
+      - name: Build Envoy
+        env:
+          GOOS: ${{ inputs.os }}
+          GOARCH: ${{ inputs.arch }}
+          ENVOY_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "${{ inputs.fips }}" == "true" ]]; then
+            make build/envoy/fips
+          else
+            make build/envoy
+          fi
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}${{ inputs.fips && '-fips' || '' }}
+          path: build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy/
+          if-no-files-found: error
