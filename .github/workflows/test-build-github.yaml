@@ -61,9 +61,9 @@ jobs:
           elif [[ "${{ inputs.os }}" == "darwin" && "${{ inputs.arch }}" == "amd64" ]]; then
             echo "runner=macos-14-large" >> "$GITHUB_OUTPUT"
           elif [[ "${{ inputs.arch }}" == "arm64" ]]; then
-            echo "runner=ubuntu-24.04-arm" >> "$GITHUB_OUTPUT"
+            echo "runner=ubuntu-24.04-arm-16-cores" >> "$GITHUB_OUTPUT"
           else
-            echo "runner=ubuntu-24.04" >> "$GITHUB_OUTPUT"
+            echo "runner=ubuntu-24.04-16-cores" >> "$GITHUB_OUTPUT"
           fi
 
   build:
