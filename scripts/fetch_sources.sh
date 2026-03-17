@@ -15,7 +15,7 @@ patches_per_version[v1.33]="$()"
 patches_per_version[v1.34]="$()"
 patches_per_version[v1.35]="$()"
 patches_per_version[v1.36]="$()"
-patches_per_version[v1.37]="$()"
+patches_per_version[v1.37]="$(realpath "patches/v1.37-0001-linux-fix-afero-bazel-deps.patch")"
 patches_per_version[v1.38]="$()"
 
 declare -A patches_darwin
