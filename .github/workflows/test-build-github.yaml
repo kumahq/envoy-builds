@@ -68,72 +68,10 @@ jobs:
 
   build:
     needs: check-input
-    runs-on: ${{ needs.check-input.outputs.runner }}
-    timeout-minutes: 360
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Free disk space
-        if: inputs.os == 'linux'
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache
-          docker system prune -af || true
-          df -h
-
-      - name: Install macOS dependencies
-        if: inputs.os == 'darwin'
-        run: |
-          brew install llvm@18 bash automake cmake coreutils libtool wget ninja go bazelisk
-
-      - name: Create LLVM libtool symlink
-        if: inputs.os == 'darwin'
-        run: |
-          LLVM_PREFIX="$(brew --prefix llvm@18)"
-          if [[ ! -f "${LLVM_PREFIX}/bin/libtool" ]]; then
-            ln -sf "${LLVM_PREFIX}/bin/llvm-libtool-darwin" "${LLVM_PREFIX}/bin/libtool"
-          fi
-
-      - name: Set macOS Bazel options
-        if: inputs.os == 'darwin'
-        env:
-          VERSION: ${{ inputs.version }}
-          ARCH: ${{ inputs.arch }}
-        run: |
-          minor_version=""
-          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
-            minor_version=$(echo "$VERSION" | cut -d'.' -f2)
-          fi
-
-          BAZEL_BUILD_EXTRA_OPTIONS=""
-          if [[ "$VERSION" == "main" || ( -n "$minor_version" && "$minor_version" -gt "34" ) ]]; then
-            BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
-            if [[ "$ARCH" == "amd64" ]]; then
-              BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=$(brew --prefix llvm@18)/"
-            fi
-          elif [[ -n "$minor_version" && "$minor_version" -lt "35" ]]; then
-            BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
-          fi
-
-          echo "BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS}" >> "$GITHUB_ENV"
-
-      - name: Build Envoy
-        env:
-          GOOS: ${{ inputs.os }}
-          GOARCH: ${{ inputs.arch }}
-          ENVOY_VERSION: ${{ inputs.version }}
-          FIPS: ${{ inputs.fips }}
-        run: |
-          if [[ "$FIPS" == "true" ]]; then
-            make build/envoy/fips
-          else
-            make build/envoy
-          fi
-
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}${{ inputs.fips && '-fips' || '' }}
-          path: build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy/
-          if-no-files-found: error
+    uses: ./.github/workflows/build-github.yaml
+    with:
+      version: ${{ inputs.version }}
+      os: ${{ inputs.os }}
+      arch: ${{ inputs.arch }}
+      fips: ${{ inputs.fips }}
+      runner: ${{ needs.check-input.outputs.runner }}
