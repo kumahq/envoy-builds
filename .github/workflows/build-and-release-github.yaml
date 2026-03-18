@@ -39,18 +39,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: linux,  arch: amd64, fips: false, runner: ubuntu-24.04 }
-          - { os: linux,  arch: amd64, fips: true,  runner: ubuntu-24.04 }
-          - { os: linux,  arch: arm64, fips: false, runner: ubuntu-24.04-arm }
-          - { os: darwin, arch: amd64, fips: false, runner: macos-14-large }
-          - { os: darwin, arch: arm64, fips: false, runner: macos-15-xlarge }
+          - { os: linux,  arch: amd64, fips: false }
+          - { os: linux,  arch: amd64, fips: true  }
+          - { os: linux,  arch: arm64, fips: false }
+          - { os: darwin, arch: amd64, fips: false }
+          - { os: darwin, arch: arm64, fips: false }
     uses: ./.github/workflows/build-github.yaml
     with:
       version: ${{ inputs.version }}
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
       fips: ${{ matrix.fips }}
-      runner: ${{ matrix.runner }}
 
   package:
     runs-on: ubuntu-24.04

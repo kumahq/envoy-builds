@@ -21,17 +21,47 @@ on:
         required: false
         default: false
         type: boolean
-      runner:
-        description: GitHub Actions runner to use
-        type: string
-        required: true
 
 permissions:
   contents: read
 
 jobs:
+  select-runner:
+    runs-on: ubuntu-24.04
+    outputs:
+      runner: ${{ steps.set.outputs.runner }}
+    steps:
+      - name: Set runner
+        id: set
+        env:
+          VERSION: ${{ inputs.version }}
+          OS: ${{ inputs.os }}
+          ARCH: ${{ inputs.arch }}
+        run: |
+          if [[ "$OS" == "darwin" ]]; then
+            minor=""
+            if [[ "$VERSION" =~ ^[0-9]+\.([0-9]+) ]]; then
+              minor="${BASH_REMATCH[1]}"
+            fi
+            if [[ "$VERSION" == "main" || ( -n "$minor" && "$minor" -ge "35" ) ]]; then
+              macos_version="15"
+            else
+              macos_version="14"
+            fi
+            if [[ "$ARCH" == "arm64" ]]; then
+              echo "runner=macos-${macos_version}-xlarge" >> "$GITHUB_OUTPUT"
+            else
+              echo "runner=macos-${macos_version}-large" >> "$GITHUB_OUTPUT"
+            fi
+          elif [[ "$ARCH" == "arm64" ]]; then
+            echo "runner=ubuntu-24.04-arm" >> "$GITHUB_OUTPUT"
+          else
+            echo "runner=ubuntu-24.04" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
-    runs-on: ${{ inputs.runner }}
+    needs: select-runner
+    runs-on: ${{ needs.select-runner.outputs.runner }}
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

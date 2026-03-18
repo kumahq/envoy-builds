@@ -34,8 +34,6 @@ permissions:
 jobs:
   check-input:
     runs-on: ubuntu-24.04
-    outputs:
-      runner: ${{ steps.set-runner.outputs.runner }}
     steps:
       - name: Fail if version starts with "v"
         env:
@@ -53,19 +51,6 @@ jobs:
           echo "FIPS is only supported for linux/amd64"
           exit 1
 
-      - name: Select runner
-        id: set-runner
-        run: |
-          if [[ "${{ inputs.os }}" == "darwin" && "${{ inputs.arch }}" == "arm64" ]]; then
-            echo "runner=macos-15-xlarge" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ inputs.os }}" == "darwin" && "${{ inputs.arch }}" == "amd64" ]]; then
-            echo "runner=macos-14-large" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ inputs.arch }}" == "arm64" ]]; then
-            echo "runner=ubuntu-24.04-arm" >> "$GITHUB_OUTPUT"
-          else
-            echo "runner=ubuntu-24.04" >> "$GITHUB_OUTPUT"
-          fi
-
   build:
     needs: check-input
     uses: ./.github/workflows/build-github.yaml
@@ -74,4 +59,3 @@ jobs:
       os: ${{ inputs.os }}
       arch: ${{ inputs.arch }}
       fips: ${{ inputs.fips }}
-      runner: ${{ needs.check-input.outputs.runner }}
