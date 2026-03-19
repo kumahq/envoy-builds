@@ -37,39 +37,49 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Fail if version starts with "v"
-        id: check-v
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          VERSION=${{ inputs.version }}
           if [[ $VERSION == v* ]]; then
             echo "Run this action without 'v' prefix - ${VERSION:1}. Don't cancel a build in progress build because things might not be cleaned up by terraform"
             exit 1
           fi
         shell: bash
-  build:
+
+  build-linux:
     needs: check-input
     strategy:
-      matrix:
-        os: [darwin, linux]
-        arch: [arm64, amd64]
-        fips: ['', 'fips']
-        exclude:
-          - os: darwin
-            fips: fips
-          - os: linux
-            arch: arm64
-            fips: fips
       fail-fast: false
+      matrix:
+        include:
+          - { arch: amd64, fips: false }
+          - { arch: amd64, fips: true }
+          - { arch: arm64, fips: false }
     uses: ./.github/workflows/build.yaml
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
     with:
-      os: ${{ matrix.os }}
+      os: linux
       arch: ${{ matrix.arch }}
-      fips: ${{ matrix.fips == 'fips' }}
+      fips: ${{ matrix.fips }}
       version: ${{ inputs.version || 'main' }}
+
+  build-darwin:
+    needs: check-input
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    uses: ./.github/workflows/build-github.yaml
+    with:
+      os: darwin
+      arch: ${{ matrix.arch }}
+      fips: false
+      version: ${{ inputs.version || 'main' }}
+
   package:
     runs-on: ubuntu-24.04
-    needs: build
+    needs: [build-linux, build-darwin]
     steps:
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -81,7 +91,6 @@ jobs:
               chmod +x "${bin}"
 
               bin="$(basename "${bin}")"
-              IFS=- read -r envoy suffix <<< "${bin}"
               archive_name="envoy-${os}-${arch}-v${version}${{ inputs.suffix }}"
               if [[ "${fips}" == "true" ]]; then
                 archive_name="${archive_name}+fips"
