@@ -21,6 +21,31 @@ on:
         required: false
         default: false
         type: boolean
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Envoy version to build (don't include leading v)
+        type: string
+        required: true
+      arch:
+        options:
+          - amd64
+          - arm64
+        description: Architecture to build Envoy for Linux
+        type: choice
+        required: true
+      os:
+        options:
+          - darwin
+          - linux
+        description: OS to build Envoy for
+        type: choice
+        required: true
+      fips:
+        description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
