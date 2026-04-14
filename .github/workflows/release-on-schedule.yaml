@@ -27,9 +27,11 @@ jobs:
 
       - name: Get Envoy versions to release
         id: get-versions-to-release
+        env:
+          ENVOY_VERSIONS: ${{ steps.check-envoy-released-versions.outputs.envoy_versions }}
         run: |
           versions_to_release=()
-          eval "envoy_versions=(${{ steps.check-envoy-released-versions.outputs.envoy_versions }})"
+          read -ra envoy_versions <<< "$ENVOY_VERSIONS"
           for envoy_version in "${envoy_versions[@]}"; do
             echo "Checking if $envoy_version has been already released"
             version=$(gh api repos/kumahq/envoy-builds/releases --jq ".[] | select(.tag_name == \"$envoy_version\") | .tag_name")
