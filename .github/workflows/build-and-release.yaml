@@ -93,7 +93,7 @@ jobs:
               chmod +x "${bin}"
 
               bin="$(basename "${bin}")"
-              archive_name="envoy-${os}-${arch}-v${version}${{ inputs.suffix }}"
+              archive_name="envoy-${os}-${arch}-v${version}${SUFFIX}"
               if [[ "${fips}" == "true" ]]; then
                 archive_name="${archive_name}+fips"
               fi
