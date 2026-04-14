@@ -21,6 +21,31 @@ on:
         required: false
         default: false
         type: boolean
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Envoy version to build (don't include leading v)
+        type: string
+        required: true
+      arch:
+        options:
+          - amd64
+          - arm64
+        description: Architecture to build Envoy for Linux
+        type: choice
+        required: true
+      os:
+        options:
+          - darwin
+          - linux
+        description: OS to build Envoy for
+        type: choice
+        required: true
+      fips:
+        description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -108,13 +133,11 @@ jobs:
             minor_version="${BASH_REMATCH[1]}"
           fi
 
-          if [[ "$VERSION" == "main" || ( -n "$minor_version" && "$minor_version" -ge "35" ) ]]; then
+          if [[ "$VERSION" == "main" || ( -n "$minor_version" && "$minor_version" -ge "34" ) ]]; then
             BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
             if [[ "$ARCH" == "amd64" && ( "$VERSION" == "main" || "$minor_version" -ge "37" ) ]]; then
               BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=$(brew --prefix llvm@18)/"
             fi
-          else
-            BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
           fi
 
           echo "BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS}" >> "$GITHUB_ENV"
