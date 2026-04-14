@@ -76,20 +76,27 @@ jobs:
       - name: Find Mac OS dedicated host
         if: inputs.os == 'darwin'
         working-directory: terraform
+        env:
+          ARCH: ${{ inputs.arch }}
         run: |
-          ./find-or-create-host.sh '${{ inputs.arch }}'
+          ./find-or-create-host.sh "$ARCH"
       - name: Set terraform variables
         working-directory: terraform
+        env:
+          ARCH: ${{ inputs.arch }}
+          OS: ${{ inputs.os }}
+          FIPS: ${{ inputs.fips }}
+          VERSION: ${{ inputs.version }}
         run: |
           cat <<EOF >> terraform.tfvars
           public_key_path = "~/.ssh/id_aws.pub"
-          arch = "${{ inputs.arch }}"
-          os = "${{ inputs.os }}"
-          fips = ${{ inputs.fips }}
-          envoy_version = "${{ inputs.version }}"
+          arch = "${ARCH}"
+          os = "${OS}"
+          fips = ${FIPS}
+          envoy_version = "${VERSION}"
           EOF
 
-          if [[ "${{ inputs.os }}" == linux ]]; then
+          if [[ "${OS}" == linux ]]; then
             echo "SSH_USER=admin" >> $GITHUB_ENV
           else
             echo "SSH_USER=ec2-user" >> $GITHUB_ENV
@@ -108,48 +115,69 @@ jobs:
       - name: Wait for VM to be ready
         working-directory: terraform
         timeout-minutes: 90
+        env:
+          PUBLIC_IP: ${{ steps.public-ip.outputs.stdout }}
         run: |
-          while ! timeout 10 ssh -i ~/.ssh/id_aws -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} 'test -e ready'
+          while ! timeout 10 ssh -i ~/.ssh/id_aws -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${SSH_USER}@${PUBLIC_IP}" 'test -e ready'
           do
             sleep 5
           done
       - name: Build Envoy
+        env:
+          VERSION: ${{ inputs.version }}
+          INPUT_OS: ${{ inputs.os }}
+          INPUT_ARCH: ${{ inputs.arch }}
+          FIPS: ${{ inputs.fips }}
+          REPO: ${{ github.repository }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          COMMIT_SHA: ${{ github.sha }}
+          PUBLIC_IP: ${{ steps.public-ip.outputs.stdout }}
         run: |
-          ssh -i ~/.ssh/id_aws ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }} <<'EOF'
-            set -e
-            minor_version=""
-            if [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
-              # If the version string matches a numeric format (X.Y or X.Y.Z)
-              minor_version=$(echo "${{ inputs.version }}" | cut -d'.' -f2)
+          # Write build script to temp file (single-quoted heredoc prevents expansion)
+          cat > /tmp/build-envoy.sh <<'SCRIPT'
+          set -e
+          minor_version=""
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            # If the version string matches a numeric format (X.Y or X.Y.Z)
+            minor_version=$(echo "$VERSION" | cut -d'.' -f2)
+          fi
+          if [[ "$INPUT_OS" == "darwin" ]]; then
+            export PATH="/opt/homebrew/bin:$PATH"
+            if [[ "$VERSION" == "main" || ( -n "$minor_version" && "$minor_version" -gt "34" ) ]]; then
+              BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
+              [[ "$INPUT_ARCH" == "amd64" ]] && BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=/usr/local/Cellar/llvm@18/18.1.8/"
+              export BAZEL_BUILD_EXTRA_OPTIONS
+            elif [[ -n "$minor_version" && "$minor_version" -lt "35" ]]; then
+              export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
             fi
-            if [[ "${{ inputs.os }}" == "darwin" ]]; then
-              export PATH="/opt/homebrew/bin:$PATH"
-              if [[ "${{ inputs.version }}" == "main" || ( -n "$minor_version" && "$minor_version" -gt "34" ) ]]; then
-                BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=13.3 --host_copt=-mmacos-version-min=13.3"
-                [[ "${{ inputs.arch }}" == "amd64" ]] && BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=/usr/local/Cellar/llvm@18/18.1.8/"
-                export BAZEL_BUILD_EXTRA_OPTIONS
-              elif [[ -n "$minor_version" && "$minor_version" -lt "35" ]]; then
-                export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-mmacos-version-min=12.7 --host_copt=-mmacos-version-min=12.7"
-              fi
-            fi
+          fi
 
-            export ENVOY_VERSION="${{ inputs.version }}"
-            REPO="${{ github.repository }}"
-            git clone "https://github.com/$REPO" && cd "${REPO#${{ github.repository_owner }}/}"
-            git checkout ${{ github.sha }}
+          export ENVOY_VERSION="$VERSION"
+          git clone "https://github.com/$REPO" && cd "${REPO#${REPO_OWNER}/}"
+          git checkout "$COMMIT_SHA"
 
-            if [[ ${{ inputs.fips }} == true ]]; then
-              make build/envoy/fips
-            else
-              make build/envoy
-            fi
+          if [[ "$FIPS" == true ]]; then
+            make build/envoy/fips
+          else
+            make build/envoy
+          fi
 
-            mv build ..
-          EOF
+          mv build ..
+          SCRIPT
+
+          # Upload and execute build script with safely-quoted env vars
+          scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=accept-new /tmp/build-envoy.sh "${SSH_USER}@${PUBLIC_IP}:/tmp/build-envoy.sh"
+          ssh -i ~/.ssh/id_aws "${SSH_USER}@${PUBLIC_IP}" \
+            "$(printf 'export VERSION=%q INPUT_OS=%q INPUT_ARCH=%q FIPS=%q REPO=%q REPO_OWNER=%q COMMIT_SHA=%q;' \
+              "$VERSION" "$INPUT_OS" "$INPUT_ARCH" "$FIPS" "$REPO" "$REPO_OWNER" "$COMMIT_SHA") bash /tmp/build-envoy.sh"
       - name: Download Envoy binaries
+        env:
+          INPUT_OS: ${{ inputs.os }}
+          INPUT_ARCH: ${{ inputs.arch }}
+          PUBLIC_IP: ${{ steps.public-ip.outputs.stdout }}
         run: |
-            envoy_dir="~/build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy"
-            scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=no -r ${{ env.SSH_USER }}@${{ steps.public-ip.outputs.stdout }}:${envoy_dir} .
+            envoy_dir="~/build/artifacts-${INPUT_OS}-${INPUT_ARCH}/envoy"
+            scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=accept-new -r "${SSH_USER}@${PUBLIC_IP}:${envoy_dir}" .
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
