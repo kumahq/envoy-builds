@@ -86,7 +86,7 @@ jobs:
         with:
           pattern: envoy-*-${{ inputs.version || 'main' }}-*
       - env:
-          SUFFIX: ${{ inputs.suffix }}run: |
+          SUFFIX: ${{ inputs.suffix }}
         run: |
           mkdir out
           for dir in envoy*; do
