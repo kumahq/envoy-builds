@@ -23,6 +23,13 @@ BAZEL_BUILD_OPTIONS=(
     "--define" "wasm=disabled"
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
 
+if [[ "${GOARCH:-}" == "amd64" ]]; then
+    BAZEL_BUILD_OPTIONS+=(
+        --//source/extensions/dynamic_modules/builtin_extensions:enabled=false
+        --//source/extensions/network/dns_resolver/hickory:enabled=false
+    )
+fi
+
 read -ra CONTRIB_ENABLED_ARGS <<< "$(python3 "${CONTRIB_ENABLED_MATRIX_SCRIPT}")"
 
 rm -rf /usr/local/include/openssl
