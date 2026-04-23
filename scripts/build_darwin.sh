@@ -24,10 +24,10 @@ BAZEL_BUILD_OPTIONS=(
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
 
 if [[ "${GOARCH:-}" == "amd64" ]]; then
-    BAZEL_BUILD_OPTIONS+=(
-        --//source/extensions/dynamic_modules/builtin_extensions:enabled=false
-        --//source/extensions/network/dns_resolver/hickory:enabled=false
-    )
+    LLVM_PREFIX=$(brew --prefix llvm 2>/dev/null || true)
+    if [[ -n "${LLVM_PREFIX}" && -d "${LLVM_PREFIX}" ]]; then
+        BAZEL_BUILD_OPTIONS+=("--repo_env=BAZEL_LLVM_PATH=${LLVM_PREFIX}")
+    fi
 fi
 
 read -ra CONTRIB_ENABLED_ARGS <<< "$(python3 "${CONTRIB_ENABLED_MATRIX_SCRIPT}")"
