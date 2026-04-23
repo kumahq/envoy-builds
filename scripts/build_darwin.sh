@@ -23,23 +23,32 @@ BAZEL_BUILD_OPTIONS=(
     "--define" "wasm=disabled"
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
 
-if [[ "${GOARCH:-}" == "amd64" ]]; then
-    LLVM_PREFIX=$(brew --prefix llvm 2>/dev/null || true)
-    if [[ -n "${LLVM_PREFIX}" && -d "${LLVM_PREFIX}" ]]; then
-        # toolchains_llvm has no pre-built LLVM 18.x for x86_64-darwin.
-        # BAZEL_LLVM_PATH makes envoy_toolchains() set toolchain_roots (skipping the download).
-        # The stub repo satisfies the @llvm_toolchain_llvm//:objcopy ref in dynamic_modules.bzl.
+if [[ "$(uname -m)" == "x86_64" ]]; then
+    # toolchains_llvm has no pre-built LLVM 18.x for x86_64-apple-darwin.
+    # BAZEL_LLVM_PATH (set externally via BAZEL_BUILD_EXTRA_OPTIONS) makes envoy_toolchains()
+    # skip the download, but dynamic_modules.bzl still references @llvm_toolchain_llvm//:objcopy.
+    # Create a stub repo pointing to the locally installed llvm-objcopy.
+    OBJCOPY_BIN=""
+    for p in \
+        /usr/local/Cellar/llvm@18/18.1.8/bin/llvm-objcopy \
+        /usr/local/opt/llvm@18/bin/llvm-objcopy \
+        /usr/local/opt/llvm/bin/llvm-objcopy \
+        "$(command -v llvm-objcopy 2>/dev/null || true)"; do
+        if [[ -x "${p}" ]]; then
+            OBJCOPY_BIN="${p}"
+            break
+        fi
+    done
+
+    if [[ -n "${OBJCOPY_BIN}" ]]; then
         LLVM_STUB_DIR=$(mktemp -d)
         mkdir -p "${LLVM_STUB_DIR}/bin"
-        ln -sf "${LLVM_PREFIX}/bin/llvm-objcopy" "${LLVM_STUB_DIR}/bin/llvm-objcopy"
+        ln -sf "${OBJCOPY_BIN}" "${LLVM_STUB_DIR}/bin/llvm-objcopy"
         cat > "${LLVM_STUB_DIR}/BUILD.bazel" <<'EOF'
 package(default_visibility = ["//visibility:public"])
 filegroup(name = "objcopy", srcs = ["bin/llvm-objcopy"])
 EOF
-        BAZEL_BUILD_OPTIONS+=(
-            "--repo_env=BAZEL_LLVM_PATH=${LLVM_PREFIX}"
-            "--override_repository=llvm_toolchain_llvm=${LLVM_STUB_DIR}"
-        )
+        BAZEL_BUILD_OPTIONS+=("--override_repository=llvm_toolchain_llvm=${LLVM_STUB_DIR}")
     fi
 fi
 
