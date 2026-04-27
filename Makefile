@@ -20,6 +20,8 @@ endif
 FIPS_BAZEL_OPTION := --define boringssl=fips
 ifeq ($(ENVOY_VERSION),main)
 	FIPS_BAZEL_OPTION := --config=boringssl-fips
+else ifeq ($(shell echo "$(ENVOY_VERSION)" | awk -F. '{print ($$2+0 >= 38)}'),1)
+	FIPS_BAZEL_OPTION := --config=boringssl-fips
 endif
 
 .PHONY: build/envoy/fips
