@@ -140,6 +140,12 @@ jobs:
             fi
           fi
 
+          # v1.38+ introduced dynamic_modules/builtin_extensions (hickory DNS resolver) which
+          # requires @llvm_toolchain_llvm that is not available on macOS builds
+          if [[ "$VERSION" == "main" || ( -n "$minor_version" && "$minor_version" -ge "38" ) ]]; then
+            BAZEL_BUILD_EXTRA_OPTIONS+=" --//source/extensions/network/dns_resolver/hickory:enabled=false"
+          fi
+
           echo "BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS}" >> "$GITHUB_ENV"
 
       - name: Build Envoy
