@@ -6,7 +6,7 @@ ARG BUILD_CMD
 # since 1.27.0 python cannot use root for building envoy
 RUN groupadd --gid 777 -f envoygroup \
   && (id -u envoybuild >/dev/null 2>&1 || useradd -o --uid 777 --gid 777 --no-create-home --home-dir /build envoybuild) \
-  && usermod -a -G pcap envoybuild \
+  && (getent group pcap >/dev/null && usermod -a -G pcap envoybuild || true) \
   && mkdir -p /build /source \
   && chown -R envoybuild:envoygroup /build /source
 
