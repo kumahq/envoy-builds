@@ -38,7 +38,11 @@ BUILD_CMD=${BUILD_CMD:-"bazel build ${BAZEL_BUILD_OPTIONS[@]} -c opt ${BUILD_TAR
 ENVOY_BUILD_CONFIG=$(curl --fail --location --silent https://raw.githubusercontent.com/envoyproxy/envoy/"${ENVOY_TAG}"/.github/config.yml)
 ENVOY_BUILD_REPO=$(echo "${ENVOY_BUILD_CONFIG}" | awk '/^  repo:/ {print $2; exit}')
 ENVOY_BUILD_TAG=$(echo "${ENVOY_BUILD_CONFIG}" | awk '/^  tag:/ {print $2; exit}')
-ENVOY_BUILD_IMAGE="${ENVOY_BUILD_REPO:-docker.io/envoyproxy/envoy-build}:${ENVOY_BUILD_TAG}"
+# v1.37+ split envoy-build into variants; "ci" is the standard build image.
+if [[ "${ENVOY_BUILD_REPO}" != *envoy-build-ubuntu ]]; then
+  ENVOY_BUILD_TAG="ci-${ENVOY_BUILD_TAG}"
+fi
+ENVOY_BUILD_IMAGE="${ENVOY_BUILD_REPO}:${ENVOY_BUILD_TAG}"
 LOCAL_BUILD_IMAGE="envoy-builder:${ENVOY_TAG}"
 
 echo "BUILD_CMD=${BUILD_CMD}"

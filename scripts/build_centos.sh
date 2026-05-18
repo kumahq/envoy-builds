@@ -29,7 +29,11 @@ ENVOY_BUILD_CONFIG=$(curl --fail --location --silent https://raw.githubuserconte
 ENVOY_BUILD_REPO=$(echo "${ENVOY_BUILD_CONFIG}" | awk '/^  repo:/ {print $2; exit}')
 ENVOY_BUILD_TAG=$(echo "${ENVOY_BUILD_CONFIG}" | awk '/^  tag:/ {print $2; exit}')
 ENVOY_BUILD_SHA=$(echo "${ENVOY_BUILD_CONFIG}" | awk '/^  sha:/ {print $2; exit}')
-ENVOY_BUILD_IMAGE="${ENVOY_BUILD_REPO:-docker.io/envoyproxy/envoy-build}:${ENVOY_BUILD_TAG}@sha256:${ENVOY_BUILD_SHA}"
+# v1.37+ split envoy-build into variants; "ci" is the standard build image.
+if [[ "${ENVOY_BUILD_REPO}" != *envoy-build-ubuntu ]]; then
+  ENVOY_BUILD_TAG="ci-${ENVOY_BUILD_TAG}"
+fi
+ENVOY_BUILD_IMAGE="${ENVOY_BUILD_REPO}:${ENVOY_BUILD_TAG}@sha256:${ENVOY_BUILD_SHA}"
 LOCAL_BUILD_IMAGE="envoy-builder:${ENVOY_TAG}"
 
 docker build -t "${LOCAL_BUILD_IMAGE}" --progress=plain \
