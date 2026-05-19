@@ -3,6 +3,11 @@ FROM $ENVOY_BUILD_IMAGE
 
 ARG BUILD_CMD
 
+# binutils (strip) is not in the ci-variant build images shipped from v1.37+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends binutils \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY . /envoy-sources/
 
 RUN bash -c "pushd envoy-sources/ && bazel/setup_clang.sh /opt/llvm"

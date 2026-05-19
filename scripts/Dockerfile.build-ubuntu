@@ -3,11 +3,16 @@ FROM $ENVOY_BUILD_IMAGE
 
 ARG BUILD_CMD
 
+# binutils (strip) is not in the ci-variant build images shipped from v1.37+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends binutils \
+  && rm -rf /var/lib/apt/lists/*
+
 # since 1.27.0 python cannot use root for building envoy
 RUN groupadd --gid 777 -f envoygroup \
-  && useradd -o --uid 777 --gid 777 --no-create-home --home-dir /build envoybuild \
-  && usermod -a -G pcap envoybuild \
-  && mkdir /build /source \
+  && (id -u envoybuild >/dev/null 2>&1 || useradd -o --uid 777 --gid 777 --no-create-home --home-dir /build envoybuild) \
+  && (getent group pcap >/dev/null && usermod -a -G pcap envoybuild || true) \
+  && mkdir -p /build /source \
   && chown -R envoybuild:envoygroup /build /source
 
 COPY --chown=envoybuild:envoygroup . /envoy-sources/
