@@ -1,5 +1,5 @@
 name: Build (GitHub runners)
-run-name: Build ${{ inputs.os }}-${{ inputs.arch }}-v${{ inputs.version }}${{ inputs.fips && '+fips' || '' }}
+run-name: Build ${{ inputs.os }}-${{ inputs.arch }}-v${{ inputs.version }}${{ inputs.fips && '+fips' || '' }}${{ inputs.debug && '+debug' || '' }}
 
 on:
   workflow_call:
@@ -18,6 +18,11 @@ on:
         required: true
       fips:
         description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
+      debug:
+        description: Build with debug symbols (-c opt --copt=-g --strip=never)
         required: false
         default: false
         type: boolean
@@ -43,6 +48,11 @@ on:
         required: true
       fips:
         description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
+      debug:
+        description: Build with debug symbols (-c opt --copt=-g --strip=never)
         required: false
         default: false
         type: boolean
@@ -154,15 +164,18 @@ jobs:
           GOARCH: ${{ inputs.arch }}
           ENVOY_VERSION: ${{ inputs.version }}
           FIPS: ${{ inputs.fips }}
+          DEBUG: ${{ inputs.debug }}
         run: |
           if [[ "$FIPS" == "true" ]]; then
             make build/envoy/fips
+          elif [[ "$DEBUG" == "true" ]]; then
+            make build/envoy/debug
           else
             make build/envoy
           fi
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}${{ inputs.debug && '+debug' || '' }}
           path: build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy/
           if-no-files-found: error

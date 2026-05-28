@@ -29,6 +29,11 @@ build/envoy/fips:
 	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} $(FIPS_BAZEL_OPTION)" \
 	ARTIFACT_EXT="+fips" $(MAKE) build/envoy
 
+.PHONY: build/envoy/debug
+build/envoy/debug:
+	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} --copt=-g --strip=never" \
+	ARTIFACT_EXT="+debug" $(MAKE) build/envoy
+
 .PHONY: build/envoy
 build/envoy:
 	ENVOY_TAG=$(ENVOY_BUILD_TAG) \

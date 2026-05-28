@@ -21,6 +21,11 @@ on:
         required: false
         default: false
         type: boolean
+      debug:
+        description: Build with debug symbols (-c opt --copt=-g --strip=never)
+        required: false
+        default: true
+        type: boolean
     secrets:
       AWS_ACCOUNT_ID:
         description: AWS account ID for infrastructure
@@ -47,6 +52,11 @@ on:
         required: true
       fips:
         description: Build FIPS (only linux amd64)
+        required: false
+        default: false
+        type: boolean
+      debug:
+        description: Build with debug symbols (-c opt --copt=-g --strip=never)
         required: false
         default: false
         type: boolean
@@ -128,6 +138,7 @@ jobs:
           INPUT_OS: ${{ inputs.os }}
           INPUT_ARCH: ${{ inputs.arch }}
           FIPS: ${{ inputs.fips }}
+          DEBUG: ${{ inputs.debug }}
           REPO: ${{ github.repository }}
           REPO_OWNER: ${{ github.repository_owner }}
           COMMIT_SHA: ${{ github.sha }}
@@ -156,6 +167,8 @@ jobs:
 
           if [[ "$FIPS" == true ]]; then
             make build/envoy/fips
+          elif [[ "$DEBUG" == true ]]; then
+            make build/envoy/debug
           else
             make build/envoy
           fi
@@ -166,8 +179,8 @@ jobs:
           # Upload and execute build script with safely-quoted env vars
           scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=accept-new /tmp/build-envoy.sh "${SSH_USER}@${PUBLIC_IP}:/tmp/build-envoy.sh"
           ssh -i ~/.ssh/id_aws "${SSH_USER}@${PUBLIC_IP}" \
-            "$(printf 'export VERSION=%q INPUT_OS=%q INPUT_ARCH=%q FIPS=%q REPO=%q REPO_OWNER=%q COMMIT_SHA=%q;' \
-              "$VERSION" "$INPUT_OS" "$INPUT_ARCH" "$FIPS" "$REPO" "$REPO_OWNER" "$COMMIT_SHA") bash /tmp/build-envoy.sh"
+            "$(printf 'export VERSION=%q INPUT_OS=%q INPUT_ARCH=%q FIPS=%q DEBUG=%q REPO=%q REPO_OWNER=%q COMMIT_SHA=%q;' \
+              "$VERSION" "$INPUT_OS" "$INPUT_ARCH" "$FIPS" "$DEBUG" "$REPO" "$REPO_OWNER" "$COMMIT_SHA") bash /tmp/build-envoy.sh"
       - name: Download Envoy binaries
         env:
           INPUT_OS: ${{ inputs.os }}
@@ -178,7 +191,7 @@ jobs:
             scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=accept-new -r "${SSH_USER}@${PUBLIC_IP}:${envoy_dir}" .
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}${{ inputs.debug && '+debug' || '' }}
           path: envoy/
           if-no-files-found: error
       - run: terraform destroy -input=false -auto-approve

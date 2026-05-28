@@ -8,6 +8,11 @@ on:
         description: Envoy version to build (don't include leading v)
         type: string
         required: true
+      debug:
+        description: Build with debug symbols (-c opt --copt=-g --strip=never)
+        type: boolean
+        required: false
+        default: false
     secrets:
       AWS_ACCOUNT_ID:
         description: AWS account ID for infrastructure
@@ -23,6 +28,10 @@ on:
         type: string
       skip-release:
         description: Skip the release?
+        type: boolean
+        required: false
+      debug:
+        description: Build with debug symbols (-c opt --copt=-g --strip=never)
         type: boolean
         required: false
   schedule:
@@ -62,6 +71,7 @@ jobs:
       os: linux
       arch: ${{ matrix.arch }}
       fips: ${{ matrix.fips }}
+      debug: ${{ inputs.debug || false }}
       version: ${{ inputs.version || 'main' }}
 
   build-darwin:
@@ -75,6 +85,7 @@ jobs:
       os: darwin
       arch: ${{ matrix.arch }}
       fips: false
+      debug: ${{ inputs.debug || false }}
       version: ${{ inputs.version || 'main' }}
 
   package:
