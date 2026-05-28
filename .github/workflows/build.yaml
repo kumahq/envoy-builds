@@ -58,7 +58,7 @@ on:
       debug:
         description: Build with debug symbols (-c opt --copt=-g --strip=never)
         required: false
-        default: false
+        default: true
         type: boolean
 permissions:
   id-token: write
