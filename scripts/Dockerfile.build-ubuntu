@@ -2,6 +2,7 @@ ARG ENVOY_BUILD_IMAGE
 FROM $ENVOY_BUILD_IMAGE
 
 ARG BUILD_CMD
+ARG NO_STRIP=false
 
 # binutils (strip) is not in the ci-variant build images shipped from v1.37+
 RUN apt-get update \
@@ -19,4 +20,5 @@ COPY --chown=envoybuild:envoygroup . /envoy-sources/
 
 RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources && bazel/setup_clang.sh /opt/llvm"
 RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources && $BUILD_CMD"
-RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources/bazel-bin/contrib/exe && strip envoy-static -o envoy"
+RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources/bazel-bin/contrib/exe && \
+    if [ '${NO_STRIP}' = 'true' ]; then cp envoy-static envoy; else strip envoy-static -o envoy; fi"

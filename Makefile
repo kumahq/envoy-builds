@@ -32,6 +32,7 @@ build/envoy/fips:
 .PHONY: build/envoy/debug
 build/envoy/debug:
 	BAZEL_BUILD_EXTRA_OPTIONS="${BAZEL_BUILD_EXTRA_OPTIONS} --copt=-g --strip=never" \
+	NO_STRIP=true \
 	ARTIFACT_EXT="+debug" $(MAKE) build/envoy
 
 .PHONY: build/envoy

@@ -67,9 +67,12 @@ if [[ -v patch_per_version["${VERSION_KEY}"] ]]; then
   fi
 fi
 
+NO_STRIP=${NO_STRIP:-false}
+
 docker build -t "${LOCAL_BUILD_IMAGE}" --progress=plain \
   --build-arg ENVOY_BUILD_IMAGE="${ENVOY_BUILD_IMAGE}" \
   --build-arg BUILD_CMD="${BUILD_CMD}" \
+  --build-arg NO_STRIP="${NO_STRIP}" \
   -f "scripts/Dockerfile.build-ubuntu" "${SOURCE_DIR}"
 
 # copy out the binary
