@@ -1,5 +1,6 @@
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
+ENVOY_VERSION ?= main
 ENVOY_BUILD_TAG := main
 BUILD_ENVOY_SCRIPT ?= scripts/build_$(GOOS).sh
 
