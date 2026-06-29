@@ -25,13 +25,13 @@ Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`
 
 ```bash
 ENVOY_VERSION=1.34.1 make build/envoy        # host OS/arch (NOTE: no leading "v")
-make build/envoy                             # ENVOY_VERSION defaults to "main"
+ENVOY_VERSION=main make build/envoy          # build upstream main (must set explicitly)
 ENVOY_VERSION=1.34.1 make build/envoy/fips   # FIPS (linux/amd64 only)
 ENVOY_DISTRO=centos ENVOY_VERSION=1.34.1 make build/envoy   # CentOS 7 variant
 make clean/envoy                             # clean sources + artifacts
 ```
 
-- `ENVOY_VERSION` is the primary knob (no `v`). `main` → builds `main`; any other value → `ENVOY_TAG=v$ENVOY_VERSION`. The `ENVOY_TAG=...` form in the README is overridden by the Makefile — **use `ENVOY_VERSION`**.
+- `ENVOY_VERSION` is the primary knob (no `v`) and **must be set explicitly**. Literal `main` → builds `main`; any other value → `ENVOY_TAG=v$ENVOY_VERSION`. Leaving it **unset** does *not* default to `main` — the Makefile only special-cases the literal string `main`, so an empty value produces a broken `ENVOY_TAG=v` (and FIPS falls back to `--define boringssl=fips`). The `ENVOY_TAG=...` form in the README is overridden by the Makefile — **use `ENVOY_VERSION`**.
 - `GOOS`/`GOARCH` default to the host (`go env`). `SOURCE_DIR` defaults to `$TMPDIR/envoy-sources`. Add `BAZEL_BUILD_EXTRA_OPTIONS` for extra Bazel flags.
 - Output: `build/artifacts-$GOOS-$GOARCH/envoy/envoy-v$VERSION[+fips][-centos]`.
 
@@ -78,11 +78,11 @@ objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu 
 - ❌ Enabling extra contrib extensions casually — only `kafka_broker` is intended; the disabled set is deliberate (build time/size, macOS compat).
 - ❌ Adding FIPS to darwin or arm64 matrix entries — FIPS is **linux/amd64 only**.
 - ❌ Suppressing linter findings (shellcheck/ruff/oxlint ignore) or bypassing hooks (`--no-verify`). Fix the root cause.
-- ❌ Bumping an action to a floating tag/branch — pin the full SHA (Renovate/dependabot manages these).
+- ❌ Bumping an action to a floating tag/branch — pin the full SHA (dependabot manages these).
 - ❌ Hand-editing files synced from `kumahq/.github` (`meta_org.yml`, `CONTRIBUTING.md`, `CODEOWNERS`, `lifecycle.yml`) — overwritten upstream.
 
 ## Conventions
 
 - **Commits:** Conventional Commits, scope **required** — `type(scope): desc`. Infra uses its own type+scope: `ci(actions): ...`, `build(build): ...`, `chore(deps): ...` (never `feat(ci)`). Title ≤ 50 chars. Sign with `-s -S`.
-- **Actions:** pinned to full commit SHA + `# vX.Y.Z` comment; Renovate/dependabot owns version bumps.
+- **Actions:** pinned to full commit SHA + `# vX.Y.Z` comment; dependabot owns version bumps.
 - **AWS:** region `us-east-2`; CI assumes role `envoy-ci`; required permissions tracked in `policy.json` — keep in sync when Terraform needs a new AWS action (the `envoy-ci-test-user` IAM user validates it).
