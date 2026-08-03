@@ -107,7 +107,8 @@ resource "aws_instance" "envoy-ci-build" {
   }
 
   root_block_device {
-    volume_size = "100"
+    # bazel's output tree plus the buildkit cache outgrew 100GB on linux/amd64
+    volume_size = "200"
   }
 
   subnet_id = data.aws_subnet.exisiting_subnet.id
