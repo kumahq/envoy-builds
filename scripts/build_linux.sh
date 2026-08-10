@@ -44,7 +44,6 @@ if [[ "${ENVOY_BUILD_REPO}" != *envoy-build-ubuntu ]]; then
   ENVOY_BUILD_TAG="ci-${ENVOY_BUILD_TAG}"
 fi
 ENVOY_BUILD_IMAGE="${ENVOY_BUILD_REPO}:${ENVOY_BUILD_TAG}"
-LOCAL_BUILD_IMAGE="envoy-builder:${ENVOY_TAG}"
 
 echo "BUILD_CMD=${BUILD_CMD}"
 
@@ -68,12 +67,14 @@ if [[ -v patch_per_version["${VERSION_KEY}"] ]]; then
   fi
 fi
 
-docker build -t "${LOCAL_BUILD_IMAGE}" --progress=plain \
+# Export only the "binary" stage to the host: tagging the builder would make docker
+# export and unpack the whole bazel tree, which needs tens of GB of extra disk.
+OUTPUT_DIR=$(mktemp -d)
+trap 'rm -rf "${OUTPUT_DIR}"' EXIT
+
+docker build --target binary --output "type=local,dest=${OUTPUT_DIR}" --progress=plain \
   --build-arg ENVOY_BUILD_IMAGE="${ENVOY_BUILD_IMAGE}" \
   --build-arg BUILD_CMD="${BUILD_CMD}" \
   -f "scripts/Dockerfile.build-ubuntu" "${SOURCE_DIR}"
 
-# copy out the binary
-id=$(docker create "${LOCAL_BUILD_IMAGE}")
-docker cp "$id":/envoy-sources/bazel-bin/contrib/exe/envoy "${BINARY_PATH}"
-docker rm -v "$id"
+mv "${OUTPUT_DIR}/envoy" "${BINARY_PATH}"

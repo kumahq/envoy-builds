@@ -1,5 +1,5 @@
 ARG ENVOY_BUILD_IMAGE
-FROM $ENVOY_BUILD_IMAGE
+FROM $ENVOY_BUILD_IMAGE AS builder
 
 ARG BUILD_CMD
 
@@ -20,3 +20,11 @@ COPY --chown=envoybuild:envoygroup . /envoy-sources/
 RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources && bazel/setup_clang.sh /opt/llvm"
 RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources && $BUILD_CMD"
 RUN sudo -EHs -u envoybuild bash -c "pushd /envoy-sources/bazel-bin/contrib/exe && strip envoy-static -o envoy"
+
+# resolve the bazel-bin symlink so the binary sits at a real path for COPY --from
+RUN cp -L /envoy-sources/bazel-bin/contrib/exe/envoy /envoy
+
+# Exported with `--output type=local`: only the binary leaves the builder, so the
+# multi-GB bazel tree is never exported and unpacked into the docker image store.
+FROM scratch AS binary
+COPY --from=builder /envoy /envoy
