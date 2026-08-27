@@ -11,7 +11,7 @@ The linux and darwin legs use **different** infrastructure — know which one yo
 
 - **`build-and-release.yaml`** is the orchestrator. Matrix: linux `{amd64, amd64+fips, arm64}` via `build.yaml`; darwin `{amd64, arm64}` via `build-github.yaml`. Then `package` tars each binary as `envoy-<os>-<arch>-v<version>[+fips].tar.gz` (renamed to `envoy` inside the archive) and creates a **draft** release `v<version>`.
 - **FIPS is linux/amd64 only.** Don't add FIPS to darwin/arm64 matrix entries.
-- **`release-on-schedule.yaml`** (daily 00:00) diffs `envoyproxy/envoy` releases from the last 24h against existing `kumahq/envoy-builds` releases and builds any missing ones, `max-parallel: 1`.
+- **`release-on-schedule.yaml`** (daily 00:00) diffs the **10 most recent** non-draft `envoyproxy/envoy` releases against existing `kumahq/envoy-builds` releases (our drafts included, so an in-flight release isn't rebuilt) and builds any missing ones, `max-parallel: 1`, at most 5 per run. There is deliberately **no time window** — upstream creates a release as a draft and publishes it minutes later, and the API hides drafts, so a window silently dropped versions for good (v1.39.1). Don't reintroduce one.
 - **`build.yaml`'s** macOS dedicated-host path (`find-or-create-host.sh`, `macos.tf`) still exists but darwin release builds now go through GitHub runners. The macOS-dedicated-host limit (~4 parallel) is legacy of that path. **`release-hosts.yaml` cleanup is still active** — it runs daily (`cron: 0 10 * * *`, plus `workflow_dispatch`) against the EC2 mac dedicated-host path that `build.yaml` retains, not just on-demand.
 
 ## Build Flow (what actually happens)
