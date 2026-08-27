@@ -175,12 +175,54 @@ jobs:
           PUBLIC_IP: ${{ steps.public-ip.outputs.stdout }}
         run: |
             envoy_dir="~/build/artifacts-${INPUT_OS}-${INPUT_ARCH}/envoy"
-            scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=accept-new -r "${SSH_USER}@${PUBLIC_IP}:${envoy_dir}" .
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            # A dropped SSH connection here would throw away a multi-hour build.
+            for attempt in 1 2 3; do
+              if scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=accept-new -r "${SSH_USER}@${PUBLIC_IP}:${envoy_dir}" .; then
+                exit 0
+              fi
+              echo "scp of ${envoy_dir} failed (attempt ${attempt}/3)"
+              rm -rf envoy
+              sleep $((attempt * 30))
+            done
+            exit 1
+      # The upload is all that stands between a multi-hour build and a usable
+      # artifact, so a transient network error there must not discard it.
+      - name: Upload Envoy binary
+        id: upload
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
           path: envoy/
           if-no-files-found: error
+
+      - name: Wait before retrying upload
+        if: steps.upload.outcome == 'failure'
+        run: sleep 60
+
+      - name: Upload Envoy binary (retry 1)
+        id: upload-retry-1
+        if: steps.upload.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
+          path: envoy/
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Wait before final upload retry
+        if: steps.upload.outcome == 'failure' && steps.upload-retry-1.outcome == 'failure'
+        run: sleep 120
+
+      - name: Upload Envoy binary (retry 2)
+        if: steps.upload.outcome == 'failure' && steps.upload-retry-1.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
+          path: envoy/
+          if-no-files-found: error
+          overwrite: true
       - run: terraform destroy -input=false -auto-approve
         working-directory: terraform
         if: always() && steps.terraform-apply.outcome != 'skipped'

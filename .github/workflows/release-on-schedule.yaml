@@ -17,42 +17,52 @@ jobs:
     outputs:
       versions_to_release: ${{ steps.get-versions-to-release.outputs.versions_to_release }}
     steps:
-      - name: Check Envoy released versions
-        id: check-envoy-released-versions
-        run: |
-          # Check if there are releases published in 24 hours
-          envoy_versions=$(gh api repos/envoyproxy/envoy/releases --jq '.[] | {tag_name, created_at} | select(((now | tonumber) - ((.created_at | fromdate) | tonumber)) < (24 * 3600)) | .tag_name')
-          envoy_versions_str=$(echo $envoy_versions | tr '\n' ' ')
-          echo "envoy_versions=$envoy_versions_str" >> $GITHUB_OUTPUT
-
+      # Diff the most recent upstream releases against ours instead of looking at
+      # a 24h window. A window permanently skips any version that was still an
+      # unpublished draft upstream when the nightly run fired (the API hides
+      # drafts), and cron regularly slips far enough to close the window before
+      # the next run sees it. Diffing is idempotent and self-heals the next day.
       - name: Get Envoy versions to release
         id: get-versions-to-release
         env:
-          ENVOY_VERSIONS: ${{ steps.check-envoy-released-versions.outputs.envoy_versions }}
+          LOOKBACK: 10
+          MAX_PER_RUN: 5
         run: |
+          upstream=$(gh api repos/envoyproxy/envoy/releases --paginate \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
+            | head -n "$LOOKBACK")
+
+          # Our own drafts are visible to this token, so an in-flight release
+          # is not queued a second time.
+          released=$(gh api repos/kumahq/envoy-builds/releases --paginate --jq '.[].tag_name')
+
           versions_to_release=()
-          read -ra envoy_versions <<< "$ENVOY_VERSIONS"
-          released_versions=$(gh api repos/kumahq/envoy-builds/releases --paginate --jq '.[].tag_name')
-          for envoy_version in "${envoy_versions[@]}"; do
-            echo "Checking if $envoy_version has been already released"
-            version=$(grep -Fx -- "$envoy_version" <<< "$released_versions" || true)
-            if [ -z "$version" ]; then
-              echo "No version found for $envoy_version"
-              version_without_v=$(echo "$envoy_version" | sed 's/^v//')
-              versions_to_release+=("$version_without_v")  # Add quotes for JSON compliance
-            else
-              echo "Envoy $version already released, skip"
+          while read -r tag; do
+            [[ -n "$tag" ]] || continue
+            if grep -Fxq -- "$tag" <<< "$released"; then
+              echo "Envoy $tag already released, skip"
+              continue
             fi
-          done
-          
-          # Clean up the array to be a plain space-separated string
-          versions_to_release_json=$(printf '"%s", ' "${versions_to_release[@]}" | sed 's/, $//')
-          versions_to_release_json="[$versions_to_release_json]"
-          echo "versions_to_release=$versions_to_release_json" >> $GITHUB_OUTPUT
+            echo "Envoy $tag is missing, queueing a build"
+            versions_to_release+=("${tag#v}")
+          done <<< "$upstream"
+
+          if [[ ${#versions_to_release[@]} -gt $MAX_PER_RUN ]]; then
+            echo "::warning::${#versions_to_release[@]} versions missing; building the newest $MAX_PER_RUN this run, the rest follow tomorrow"
+            versions_to_release=("${versions_to_release[@]:0:$MAX_PER_RUN}")
+          fi
+
+          if [[ ${#versions_to_release[@]} -eq 0 ]]; then
+            versions_to_release_json='[]'
+          else
+            versions_to_release_json=$(printf '%s\n' "${versions_to_release[@]}" | jq -R . | jq -sc .)
+          fi
+          echo "Versions to release: $versions_to_release_json"
+          echo "versions_to_release=$versions_to_release_json" >> "$GITHUB_OUTPUT"
 
   trigger-release:
     uses: ./.github/workflows/build-and-release.yaml
-    if: ${{ needs.get-envoy-versions.outputs.versions_to_release != '[""]' }}
+    if: ${{ needs.get-envoy-versions.outputs.versions_to_release != '[]' }}
     needs: get-envoy-versions
     strategy:
       max-parallel: 1 # lets build one version at the time - potential issue, if more jobs try to run at the same time they might try to allocate host that is used by other job and fail build

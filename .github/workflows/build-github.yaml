@@ -112,10 +112,23 @@ jobs:
             minor_version="${BASH_REMATCH[1]}"
           fi
 
-          brew install bash automake cmake coreutils libtool wget ninja go bazelisk
+          # Homebrew pulls bottles over the network; a transient DNS/CDN blip must
+          # not kill the job before the build even starts.
+          brew_install() {
+            for attempt in 1 2 3; do
+              if brew install "$@"; then
+                return 0
+              fi
+              echo "brew install $* failed (attempt ${attempt}/3)"
+              sleep $((attempt * 30))
+            done
+            return 1
+          }
+
+          brew_install bash automake cmake coreutils libtool wget ninja go bazelisk
 
           if [[ "$ARCH" == "amd64" && ( "$VERSION" == "main" || ( -n "$minor_version" && "$minor_version" -ge "37" ) ) ]]; then
-            brew install llvm@18
+            brew_install llvm@18
             LLVM_PREFIX="$(brew --prefix llvm@18)"
             if [[ ! -f "${LLVM_PREFIX}/bin/libtool" ]]; then
               ln -sf "${LLVM_PREFIX}/bin/llvm-libtool-darwin" "${LLVM_PREFIX}/bin/libtool"
@@ -161,8 +174,41 @@ jobs:
             make build/envoy
           fi
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      # The upload is all that stands between a multi-hour build and a usable
+      # artifact, so a transient network error there must not discard it.
+      - name: Upload Envoy binary
+        id: upload
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
           path: build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy/
           if-no-files-found: error
+
+      - name: Wait before retrying upload
+        if: steps.upload.outcome == 'failure'
+        run: sleep 60
+
+      - name: Upload Envoy binary (retry 1)
+        id: upload-retry-1
+        if: steps.upload.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
+          path: build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy/
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Wait before final upload retry
+        if: steps.upload.outcome == 'failure' && steps.upload-retry-1.outcome == 'failure'
+        run: sleep 120
+
+      - name: Upload Envoy binary (retry 2)
+        if: steps.upload.outcome == 'failure' && steps.upload-retry-1.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: envoy-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
+          path: build/artifacts-${{ inputs.os }}-${{ inputs.arch }}/envoy/
+          if-no-files-found: error
+          overwrite: true
