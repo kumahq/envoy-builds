@@ -12,6 +12,7 @@ Build behavior is gated on the Envoy **minor** version in multiple files. When a
 | macOS runner image | `build-github.yaml` (`select-runner`) | `main`/minor ≥ **35** → `macos-15`; else `macos-14` |
 | LLVM@18 (amd64) | `build-github.yaml` | `main`/minor ≥ **37** (darwin amd64) → install `llvm@18`, set `BAZEL_LLVM_PATH`. (`build.yaml` sets `BAZEL_LLVM_PATH` for amd64 whenever ≥ 35, and `terraform/macos.tf` `brew install`s `llvm@18` for **every** version — neither gates on ≥ 37) |
 | Hickory DNS resolver | `build-github.yaml` | `main`/minor ≥ **38** → `--//source/extensions/network/dns_resolver/hickory:enabled=false` (no `@llvm_toolchain_llvm` on macOS) |
+| Wasm engine flag (darwin) | `scripts/build_darwin.sh` | `main` or minor ≥ **40** → `--@proxy-wasm-cpp-host//bazel:engine=disabled`; else `--define wasm=disabled` (removed upstream in main — passing it is a hard build error) |
 | mac dedicated-host AMI | `terraform/macos.tf` | envoy 1.32/1.33/1.34 → macOS 12 AMI; else macOS 14 (legacy AWS path only) |
 
 > The `ci`-variant upstream build images (v1.37+) lack `binutils`/`strip`, so `Dockerfile.build-*` install it and `build_*.sh` append `ci-` to the build tag when the repo isn't `envoy-build-ubuntu`.
