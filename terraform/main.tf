@@ -21,18 +21,9 @@ variable "arch" {
   }
 }
 
-variable "os" {
-  type        = string
-  description = "linux or darwin"
-  validation {
-    condition     = contains(["linux", "darwin"], var.os)
-    error_message = "linux or darwin"
-  }
-}
-
 variable "fips" {
   description = "fips build"
-  type   = bool
+  type        = bool
 }
 
 variable "envoy_version" {
@@ -42,24 +33,11 @@ variable "envoy_version" {
 }
 
 locals {
-  ami = {
-    linux = data.aws_ssm_parameter.debian.value
-    darwin = data.aws_ami.mac.image_id
-  }
   instance_type = {
-    darwin = {
-      amd64 = "mac1.metal"
-      arm64 = "mac2.metal"
-    }
-    linux = {
-      amd64 = "c6i.4xlarge"
-      arm64 = "c7g.4xlarge"
-    }
+    amd64 = "c6i.4xlarge"
+    arm64 = "c7g.4xlarge"
   }
-  user_data = {
-    linux = local.linux_user_data
-    darwin = local.macos_user_data
-  }
+  name_suffix = "${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
 }
 
 provider "aws" {
@@ -79,7 +57,7 @@ data "aws_subnet" "exisiting_subnet" {
 }
 
 module "security_group" {
-  source = "terraform-aws-modules/security-group/aws//modules/ssh"
+  source  = "terraform-aws-modules/security-group/aws//modules/ssh"
   version = "4.17.1"
 
   name   = "envoy-ci-ssh"
@@ -89,21 +67,21 @@ module "security_group" {
 }
 
 resource "aws_key_pair" "ci" {
-  key_name = "envoy-ci-${var.os}-${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
+  key_name   = "envoy-ci-linux-${local.name_suffix}"
   public_key = trimspace(file(var.public_key_path))
 }
 
 resource "aws_instance" "envoy-ci-build" {
-  ami = local.ami[var.os]
+  ami = data.aws_ssm_parameter.debian.value
 
-  instance_type = local.instance_type[var.os][var.arch]
+  instance_type = local.instance_type[var.arch]
 
   iam_instance_profile = aws_iam_instance_profile.envoy-ci-build.name
 
   key_name = aws_key_pair.ci.id
 
   tags = {
-    Name = "envoy-ci-${var.os}-${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
+    Name = "envoy-ci-linux-${local.name_suffix}"
   }
 
   root_block_device {
@@ -111,12 +89,10 @@ resource "aws_instance" "envoy-ci-build" {
     volume_size = "200"
   }
 
-  subnet_id = data.aws_subnet.exisiting_subnet.id
+  subnet_id              = data.aws_subnet.exisiting_subnet.id
   vpc_security_group_ids = [module.security_group.security_group_id]
 
-  user_data = local.user_data[var.os]
-
-  host_id = var.os == "darwin" ? var.host_id : ""
+  user_data = local.linux_user_data
 
   user_data_replace_on_change = true
 }
@@ -124,11 +100,11 @@ resource "aws_instance" "envoy-ci-build" {
 resource "aws_iam_instance_profile" "envoy-ci-build" {
   role = aws_iam_role.role.name
 
-  name = "envoy-ci-build-${var.os}-${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
+  name = "envoy-ci-build-linux-${local.name_suffix}"
 }
 
 resource "aws_iam_role" "role" {
-  name = "envoy-ci-build-${var.os}-${var.arch}-${var.envoy_version}${var.fips ? "-fips" : ""}"
+  name = "envoy-ci-build-linux-${local.name_suffix}"
   path = "/"
 
   assume_role_policy = <<EOF
@@ -147,7 +123,7 @@ resource "aws_iam_role" "role" {
 }
 EOF
 
-  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore","arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore", "arn:aws:iam::aws:policy/AmazonS3FullAccess"]
 }
 
 output "public_ip" {
