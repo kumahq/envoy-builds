@@ -59,24 +59,14 @@ jobs:
       - name: Set runner
         id: set
         env:
-          VERSION: ${{ inputs.version }}
           OS: ${{ inputs.os }}
           ARCH: ${{ inputs.arch }}
         run: |
           if [[ "$OS" == "darwin" ]]; then
-            minor=""
-            if [[ "$VERSION" =~ ^[0-9]+\.([0-9]+) ]]; then
-              minor="${BASH_REMATCH[1]}"
-            fi
-            if [[ "$VERSION" == "main" || ( -n "$minor" && "$minor" -ge "35" ) ]]; then
-              macos_version="15"
-            else
-              macos_version="14"
-            fi
             if [[ "$ARCH" == "arm64" ]]; then
-              echo "runner=macos-${macos_version}-xlarge" >> "$GITHUB_OUTPUT"
+              echo "runner=macos-15-xlarge" >> "$GITHUB_OUTPUT"
             else
-              echo "runner=macos-${macos_version}-large" >> "$GITHUB_OUTPUT"
+              echo "runner=macos-15-large" >> "$GITHUB_OUTPUT"
             fi
           elif [[ "$ARCH" == "arm64" ]]; then
             echo "runner=ubuntu-24.04-arm" >> "$GITHUB_OUTPUT"
@@ -133,11 +123,9 @@ jobs:
             minor_version="${BASH_REMATCH[1]}"
           fi
 
-          if [[ "$VERSION" == "main" || ( -n "$minor_version" && "$minor_version" -ge "34" ) ]]; then
-            BAZEL_BUILD_EXTRA_OPTIONS="--macos_minimum_os=13.3 --host_macos_minimum_os=13.3"
-            if [[ "$ARCH" == "amd64" && ( "$VERSION" == "main" || "$minor_version" -ge "37" ) ]]; then
-              BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=$(brew --prefix llvm@18)/"
-            fi
+          BAZEL_BUILD_EXTRA_OPTIONS="--macos_minimum_os=13.3 --host_macos_minimum_os=13.3"
+          if [[ "$ARCH" == "amd64" && ( "$VERSION" == "main" || ( -n "$minor_version" && "$minor_version" -ge "37" ) ) ]]; then
+            BAZEL_BUILD_EXTRA_OPTIONS+=" --repo_env=BAZEL_LLVM_PATH=$(brew --prefix llvm@18)/"
           fi
 
           # v1.38+ introduced dynamic_modules/builtin_extensions (hickory DNS resolver) which

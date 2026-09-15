@@ -14,7 +14,6 @@ CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "scripts/contrib_enabled_matrix.py")
 # Define Dockerfile patches per OS and version
 declare -A patch_per_version
 patch_per_version[main]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
-patch_per_version[v1.34]="$()"
 patch_per_version[v1.35]="$()"
 patch_per_version[v1.36]="$()"
 patch_per_version[v1.37]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
