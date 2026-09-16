@@ -92,11 +92,7 @@
                 "ec2:CreateSubnet",
                 "ec2:CreateTags",
                 "ec2:DescribeSubnets",
-                "ec2:TerminateInstances",
-                "ec2:AllocateHosts",
-                "ec2:DescribeHosts",
-                "ec2:ModifyHosts",
-                "ec2:ReleaseHosts"
+                "ec2:TerminateInstances"
             ],
             "Resource": "*"
         }
