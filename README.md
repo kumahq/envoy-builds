@@ -6,27 +6,24 @@ There is a new Makefile target `build/envoy` that places an `envoy` binary in `b
 
 ## Usage
 
-Build the latest supported Envoy binary for your host OS:
+Build a supported Envoy binary for your host OS:
 
 ```shell
-$ ENVOY_TAG=v1.30.4 make build/envoy
+$ ENVOY_VERSION=1.39.1 make build/envoy
 ```
 
 ## CI
 
-This repository also contains terraform and a Github workflow for building Envoy
-in a VM.
+This repository also contains terraform and a Github workflow for building Linux Envoy binaries
+in an AWS VM. Darwin binaries are built on GitHub-hosted macOS runners.
 
 ### Github workflow
 
-Run the `build-and-release.yaml` workflow with desired version of envoy without leading `v` (`1.29.7`) to build binaries
+Run the `build-and-release.yaml` workflow with desired version of envoy without leading `v` (`1.39.1`) to build binaries
 for linux/darwin amd64/arm64 and additionally a FIPS version for linux/amd64 and publish a _draft
 Github release_.
 
-### Limitations
-
-It's only possible to run 4 jobs in parallel due to the number of available macOS hosts.
-#### AWS IAM
+### AWS IAM
 
 The Github workflow assumes the `envoy-ci` role. This role has the
 `envoy-ci-workflow` policy attached, which should have the

@@ -8,7 +8,7 @@ Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`
 - **Python 3** — `scripts/contrib_enabled_matrix.py` (reads envoy's `contrib_build_config.bzl`)
 - **Bazel / Bazelisk** — actual compile (`//contrib/exe:envoy-static`)
 - **Docker** — hermetic linux/centos builds in the upstream envoy-build image
-- **Terraform** (AWS) — provisions Linux EC2 + mac dedicated hosts in `us-east-2`
+- **Terraform** (AWS) — provisions Linux EC2 build VMs in `us-east-2`
 - **GitHub Actions** — orchestration, matrix, release publishing
 - No test suite. "Tests" = the build produces a working `envoy` binary.
 
@@ -17,21 +17,22 @@ Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`
 - `Makefile` — `build/envoy`, `build/envoy/fips`, `clean/envoy`
 - `scripts/` — per-OS build scripts, `fetch_sources.sh`, `contrib_enabled_matrix.py`, Dockerfiles
 - `patches/` — per-version, per-OS patches (see `.claude/rules/patch-system.md`)
-- `terraform/` — AWS build-host provisioning
-- `.github/workflows/` — `build-and-release.yaml` (orchestrator), `build.yaml`, `build-github.yaml`, `release-on-schedule.yaml`, `release-hosts.yaml`, `ci.yaml`
+- `terraform/` — AWS Linux build-VM provisioning
+- `.github/workflows/` — `build-and-release.yaml` (orchestrator), `build.yaml`, `build-github.yaml`, `release-on-schedule.yaml`, `ci.yaml`
 - `policy.json` — IAM permissions the `envoy-ci` role must have
 
 ## Local Build Commands
 
 ```bash
-ENVOY_VERSION=1.34.1 make build/envoy        # host OS/arch (NOTE: no leading "v")
+ENVOY_VERSION=1.39.1 make build/envoy        # host OS/arch (NOTE: no leading "v")
 make build/envoy                             # ENVOY_VERSION defaults to "main"
-ENVOY_VERSION=1.34.1 make build/envoy/fips   # FIPS (linux/amd64 only)
-ENVOY_DISTRO=centos ENVOY_VERSION=1.34.1 make build/envoy   # CentOS 7 variant
+ENVOY_VERSION=1.39.1 make build/envoy/fips   # FIPS (linux/amd64 only)
+ENVOY_DISTRO=centos ENVOY_VERSION=1.39.1 make build/envoy   # CentOS 7 variant
 make clean/envoy                             # clean sources + artifacts
 ```
 
-- `ENVOY_VERSION` is the primary knob (no `v`). Defaults to `main` (`ENVOY_VERSION ?= main`) → builds `main`; any other value → `ENVOY_TAG=v$ENVOY_VERSION`. The `ENVOY_TAG=...` form in the README is overridden by the Makefile — **use `ENVOY_VERSION`**.
+- `ENVOY_VERSION` is the primary knob (no `v`). Defaults to `main` (`ENVOY_VERSION ?= main`) → builds `main`; any other value → `ENVOY_TAG=v$ENVOY_VERSION`. Setting `ENVOY_TAG` directly is overridden by the Makefile — **use `ENVOY_VERSION`**.
+- Minimum supported Envoy version is **1.36**.
 - `GOOS`/`GOARCH` default to the host (`go env`). `SOURCE_DIR` defaults to `$TMPDIR/envoy-sources`. Add `BAZEL_BUILD_EXTRA_OPTIONS` for extra Bazel flags.
 - Output: `build/artifacts-$GOOS-$GOARCH/envoy/envoy-v$VERSION[+fips][-centos]`.
 
@@ -56,9 +57,9 @@ Before committing / opening a PR:
 
 ```bash
 terraform -chdir=terraform fmt -check && terraform -chdir=terraform validate
-gh workflow run build-and-release.yaml -f version=1.34.1   # full build+release (draft); confirm first
-gh workflow run build.yaml        -f os=linux  -f arch=amd64 -f version=1.34.1   # one linux leg
-gh workflow run build-github.yaml -f os=darwin -f arch=arm64 -f version=1.34.1   # one darwin leg
+gh workflow run build-and-release.yaml -f version=1.39.1   # full build+release (draft); confirm first
+gh workflow run build.yaml -f arch=amd64 -f version=1.39.1   # one linux leg (AWS)
+gh workflow run build-github.yaml -f os=darwin -f arch=arm64 -f version=1.39.1   # one darwin leg
 gh run watch "$(gh run list -w build-and-release.yaml -L1 --json databaseId -q '.[0].databaseId')"
 objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu | tail -1   # glibc req
 ```
@@ -67,14 +68,15 @@ objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu 
 
 - ✅ **Native darwin build** (`make build/envoy` on a macOS host) — run and verify locally.
 - ✅ **Docker linux/centos build** (`build_linux.sh`, `build_centos.sh`) — run locally if Docker is available.
-- 🚫 **Terraform `apply`/`destroy`** — CI-only. Provisions **real AWS resources** (EC2, mac dedicated hosts, IAM) under `envoy-ci` in `us-east-2`. Locally limit to `fmt`/`validate`/`plan` (and `plan` only with credentials you were told to use).
-- 🚫 **Build/release workflows** — trigger only via `gh workflow run` with **explicit user confirmation**. Never auto-dispatch; mac hosts and draft releases are side-effecting. Don't cancel an in-progress build (Terraform may not clean up).
+- 🚫 **Terraform `apply`/`destroy`** — CI-only. Provisions **real AWS resources** (EC2, IAM) under `envoy-ci` in `us-east-2`. Locally limit to `fmt`/`validate`/`plan` (and `plan` only with credentials you were told to use).
+- 🚫 **Build/release workflows** — trigger only via `gh workflow run` with **explicit user confirmation**. Never auto-dispatch; EC2 VMs, macOS runners and draft releases are side-effecting. Don't cancel an in-progress build (Terraform may not clean up).
 
 ## Anti-Patterns
 
-- ❌ Leading `v` in `ENVOY_VERSION` / version input — `build-and-release` and `check-input` reject `v*`; use `1.34.1`.
-- ❌ Editing one version-gating map and not the siblings (e.g. bumping macOS runner but not LLVM/min-version). Builds fail in confusing ways.
-- ❌ `terraform apply`/`destroy` from a laptop, or cancelling a running build — orphans AWS hosts/roles.
+- ❌ Leading `v` in `ENVOY_VERSION` / version input — `build-and-release` and `check-input` reject `v*`; use `1.39.1`.
+- ❌ Editing one version-gating map and not the siblings (e.g. bumping LLVM gate but not the Hickory/Wasm gates). Builds fail in confusing ways.
+- ❌ Re-adding gates, map keys or patches for Envoy < 1.36.
+- ❌ `terraform apply`/`destroy` from a laptop, or cancelling a running build — orphans AWS instances/roles.
 - ❌ Enabling extra contrib extensions casually — only `kafka_broker` is intended; the disabled set is deliberate (build time/size, macOS compat).
 - ❌ Adding FIPS to darwin or arm64 matrix entries — FIPS is **linux/amd64 only**.
 - ❌ Suppressing linter findings (shellcheck/ruff/oxlint ignore) or bypassing hooks (`--no-verify`). Fix the root cause.

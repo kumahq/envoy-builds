@@ -44,6 +44,21 @@ jobs:
             echo "Run this action without 'v' prefix - ${VERSION:1}. Don't cancel a build in progress build because things might not be cleaned up by terraform"
             exit 1
           fi
+
+          # empty version means the scheduled run, which builds main
+          if [[ -n "$VERSION" && "$VERSION" != "main" ]]; then
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+ ]]; then
+              echo "Version must be 'main' or X.Y.Z, got '${VERSION}'"
+              exit 1
+            fi
+            major="${VERSION%%.*}"
+            minor="${VERSION#*.}"
+            minor="${minor%%.*}"
+            if (( major < 1 || ( major == 1 && minor < 36 ) )); then
+              echo "Envoy ${VERSION} is older than the minimum supported version 1.36"
+              exit 1
+            fi
+          fi
         shell: bash
 
   build-linux:
@@ -59,7 +74,6 @@ jobs:
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
     with:
-      os: linux
       arch: ${{ matrix.arch }}
       fips: ${{ matrix.fips }}
       version: ${{ inputs.version || 'main' }}

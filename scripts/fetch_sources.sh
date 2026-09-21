@@ -11,16 +11,12 @@ set -o pipefail
 set -o nounset
 
 declare -A patches_per_version
-patches_per_version[v1.34]="$()"
-patches_per_version[v1.35]="$()"
 patches_per_version[v1.36]="$()"
 patches_per_version[v1.37]="$()"
 patches_per_version[v1.38]="$()"
 patches_per_version[v1.39]="$()"
 
 declare -A patches_darwin
-patches_darwin[v1.34]="$(realpath "patches/v1.34-0001-darwin-patch-lua.patch")"
-patches_darwin[v1.35]="$(realpath "patches/v1.35-0001-darwin-patch-lua.patch")"
 patches_darwin[v1.36]="$(realpath "patches/v1.36-0001-darwin-patch-lua.patch")"
 patches_darwin[v1.37]="$()"
 patches_darwin[v1.38]="$()"

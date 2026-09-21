@@ -8,7 +8,7 @@ Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`
 - **Python 3** — `scripts/contrib_enabled_matrix.py` (reads envoy's `contrib_build_config.bzl`)
 - **Bazel / Bazelisk** — actual compile (`//contrib/exe:envoy-static`)
 - **Docker** — hermetic linux/centos builds in the upstream envoy-build image
-- **Terraform** (AWS) — provisions Linux EC2 + mac dedicated hosts in `us-east-2`
+- **Terraform** (AWS) — provisions Linux EC2 build VMs in `us-east-2`
 - **GitHub Actions** — orchestration, matrix, release publishing
 - No test suite. "Tests" = the build produces a working `envoy` binary.
 
@@ -17,21 +17,22 @@ Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`
 - `Makefile` — `build/envoy`, `build/envoy/fips`, `clean/envoy`
 - `scripts/` — per-OS build scripts, `fetch_sources.sh`, `contrib_enabled_matrix.py`, Dockerfiles
 - `patches/` — per-version, per-OS patches (see [Patch System](#patch-system))
-- `terraform/` — AWS build-host provisioning
-- `.github/workflows/` — `build-and-release.yaml` (orchestrator), `build.yaml`, `build-github.yaml`, `release-on-schedule.yaml`, `release-hosts.yaml`, `ci.yaml`
+- `terraform/` — AWS Linux build-VM provisioning
+- `.github/workflows/` — `build-and-release.yaml` (orchestrator), `build.yaml`, `build-github.yaml`, `release-on-schedule.yaml`, `ci.yaml`
 - `policy.json` — IAM permissions the `envoy-ci` role must have
 
 ## Local Build Commands
 
 ```bash
-ENVOY_VERSION=1.34.1 make build/envoy        # host OS/arch (NOTE: no leading "v")
+ENVOY_VERSION=1.39.1 make build/envoy        # host OS/arch (NOTE: no leading "v")
 make build/envoy                             # ENVOY_VERSION defaults to "main"
-ENVOY_VERSION=1.34.1 make build/envoy/fips   # FIPS (linux/amd64 only)
-ENVOY_DISTRO=centos ENVOY_VERSION=1.34.1 make build/envoy   # CentOS 7 variant
+ENVOY_VERSION=1.39.1 make build/envoy/fips   # FIPS (linux/amd64 only)
+ENVOY_DISTRO=centos ENVOY_VERSION=1.39.1 make build/envoy   # CentOS 7 variant
 make clean/envoy                             # clean sources + artifacts
 ```
 
-- `ENVOY_VERSION` is the primary knob (no `v`). Defaults to `main` (`ENVOY_VERSION ?= main`) → builds `main`; any other value → `ENVOY_TAG=v$ENVOY_VERSION`. The `ENVOY_TAG=...` form in the README is overridden by the Makefile — **use `ENVOY_VERSION`**.
+- `ENVOY_VERSION` is the primary knob (no `v`). Defaults to `main` (`ENVOY_VERSION ?= main`) → builds `main`; any other value → `ENVOY_TAG=v$ENVOY_VERSION`. Setting `ENVOY_TAG` directly is overridden by the Makefile — **use `ENVOY_VERSION`**.
+- Minimum supported Envoy version is **1.36**.
 - `GOOS`/`GOARCH` default to the host (`go env`). `SOURCE_DIR` defaults to `$TMPDIR/envoy-sources`. Add `BAZEL_BUILD_EXTRA_OPTIONS` for extra Bazel flags.
 - Output: `build/artifacts-$GOOS-$GOARCH/envoy/envoy-v$VERSION[+fips][-centos]`.
 
@@ -43,18 +44,19 @@ Build behavior is gated on the Envoy minor version across many files — check e
 
 Build behavior is gated on the Envoy **minor** version in multiple files. When adding/fixing a version, check **every** entry — they must stay consistent. Grep the minor number across all gating files; updating one and forgetting siblings causes confusing build failures.
 
+Minimum supported Envoy version is **1.36** — don't reintroduce gates, keys or patches for older versions.
+
 | Gate | File | Behavior |
 |------|------|----------|
 | FIPS config flag | `Makefile` | `main` or minor ≥ **38** → `--config=boringssl-fips`; else `--define boringssl=fips` |
-| Ubuntu Dockerfile patch | `scripts/build_linux.sh` (`patch_per_version`) | Applied for `main`, `v1.37`, `v1.38`; empty for v1.34–v1.36 |
-| Darwin Lua patch | `scripts/fetch_sources.sh` (`patches_darwin`) | Applied for v1.34–v1.36; none for v1.37+ (a `patches/v1.33-…-darwin-patch-lua.patch` file exists but is **not** wired into `patches_darwin`) |
+| Ubuntu Dockerfile patch | `scripts/build_linux.sh` (`patch_per_version`) | Applied for `main`, `v1.37`–`v1.39`; empty for v1.36 |
+| Darwin Lua patch | `scripts/fetch_sources.sh` (`patches_darwin`) | Applied for v1.36; none for v1.37+ |
 | Generic source patch | `scripts/fetch_sources.sh` (`patches_per_version`) | Currently all empty — add here if upstream needs a source patch |
-| macOS min version | `build-github.yaml` (≥ **34**), `build.yaml` (≥ **35**) | `main`/at-or-above the gate → `--macos_minimum_os=13.3 --host_macos_minimum_os=13.3`. **Gates differ:** `build-github.yaml` uses `-ge 34`, `build.yaml` uses `-gt 34` (so v1.34 is excluded on the EC2 mac path) — likely a `build.yaml` bug |
-| macOS runner image | `build-github.yaml` (`select-runner`) | `main`/minor ≥ **35** → `macos-15`; else `macos-14` |
-| LLVM@18 (amd64) | `build-github.yaml` | `main`/minor ≥ **37** (darwin amd64) → install `llvm@18`, set `BAZEL_LLVM_PATH`. (`build.yaml` sets `BAZEL_LLVM_PATH` for amd64 whenever ≥ 35, and `terraform/macos.tf` `brew install`s `llvm@18` for **every** version — neither gates on ≥ 37) |
+| LLVM@18 (amd64) | `build-github.yaml` | `main`/minor ≥ **37** (darwin amd64) → install `llvm@18`, set `BAZEL_LLVM_PATH` |
 | Hickory DNS resolver | `build-github.yaml` | `main`/minor ≥ **38** → `--//source/extensions/network/dns_resolver/hickory:enabled=false` (no `@llvm_toolchain_llvm` on macOS) |
 | Wasm engine flag (darwin) | `scripts/build_darwin.sh` | `main` or minor ≥ **40** → `--@proxy-wasm-cpp-host//bazel:engine=disabled`; else `--define wasm=disabled` (removed upstream in main — passing it is a hard build error) |
-| mac dedicated-host AMI | `terraform/macos.tf` | envoy 1.32/1.33/1.34 → macOS 12 AMI; else macOS 14 (legacy AWS path only) |
+
+> Darwin legs always run on `macos-15` runners with `--macos_minimum_os=13.3 --host_macos_minimum_os=13.3` (no version gate).
 
 > The `ci`-variant upstream build images (v1.37+) lack `binutils`/`strip`, so `Dockerfile.build-*` install it and `build_*.sh` append `ci-` to the build tag when the repo isn't `envoy-build-ubuntu`.
 
@@ -71,7 +73,7 @@ Build behavior is gated on the Envoy **minor** version in multiple files. When a
 - Patches live in `patches/`, named `<key>-NNNN-<desc>.patch`.
 - **Darwin Lua** patches (`vX.Y-0001-darwin-patch-lua.patch`) are git-applied to envoy sources in `scripts/fetch_sources.sh` for older versions only.
 - **Ubuntu Dockerfile** patch (`main-0001-linux-dockerfile-build-ubuntu.patch`) is `patch`-applied to `scripts/Dockerfile.build-ubuntu` in `scripts/build_linux.sh`.
-- Version key = `vMAJOR.MINOR` (e.g. `v1.35.8` → `v1.35`). An empty `"$()"` entry means "no patch for this version" — keep the key, leave it empty.
+- Version key = `vMAJOR.MINOR` (e.g. `v1.39.1` → `v1.39`). An empty `"$()"` entry means "no patch for this version" — keep the key, leave it empty.
 
 See the [Version-Gating Map](#version-gating-map) for which patch arrays apply per version.
 
@@ -85,15 +87,14 @@ The linux and darwin legs use **different** infrastructure — know which one yo
 
 | OS | Workflow | Runs on | Notes |
 |----|----------|---------|-------|
-| **linux** | `build.yaml` | AWS EC2 VM via Terraform | Generates SSH key, `terraform apply`, SSHes in, runs `make`, `scp`s the binary back, always `terraform destroy`. Assumes IAM role `envoy-ci`. |
-| **darwin** | `build-github.yaml` | GitHub-hosted macOS runner | `select-runner` job picks `macos-14`/`macos-15` (+`-large`/`-xlarge`). Installs brew deps incl. `llvm@18`. No Terraform. |
+| **linux** | `build.yaml` | AWS EC2 VM via Terraform | Linux-only (no `os` input). Generates SSH key, `terraform apply`, SSHes in, runs `make`, `scp`s the binary back, always `terraform destroy`. Assumes IAM role `envoy-ci`. |
+| **darwin** | `build-github.yaml` | GitHub-hosted macOS runner | `select-runner` job picks `macos-15-large` (amd64) / `macos-15-xlarge` (arm64). Installs brew deps incl. `llvm@18`. No Terraform. |
 
 > `build-github.yaml` is **OS-agnostic**, not darwin-only — its `workflow_dispatch` accepts `os: darwin` or `linux`, and `select-runner` picks `ubuntu-24.04`/`ubuntu-24.04-arm` when `os == linux`. `build-and-release.yaml` is what routes darwin to it; `gh workflow run build-github.yaml -f os=linux ...` also works. The table maps each OS to the workflow the orchestrator uses for it.
 
 - **`build-and-release.yaml`** is the orchestrator. Matrix: linux `{amd64, amd64+fips, arm64}` via `build.yaml`; darwin `{amd64, arm64}` via `build-github.yaml`. Then `package` tars each binary as `envoy-<os>-<arch>-v<version>[+fips].tar.gz` (renamed to `envoy` inside the archive) and creates a **draft** release `v<version>`.
 - **FIPS is linux/amd64 only.** Don't add FIPS to darwin/arm64 matrix entries.
 - **`release-on-schedule.yaml`** (daily 00:00) diffs `envoyproxy/envoy` releases from the last 24h against existing `kumahq/envoy-builds` releases and builds any missing ones, `max-parallel: 1`.
-- **`build.yaml`'s** macOS dedicated-host path (`find-or-create-host.sh`, `macos.tf`) still exists but darwin release builds now go through GitHub runners. The macOS-dedicated-host limit (~4 parallel) is legacy of that path. **`release-hosts.yaml` cleanup is still active** — it runs daily (`cron: 0 10 * * *`, plus `workflow_dispatch`) against the EC2 mac dedicated-host path that `build.yaml` retains, not just on-demand.
 
 #### Build Flow (what actually happens)
 
@@ -118,9 +119,9 @@ Before committing / opening a PR:
 
 ```bash
 terraform -chdir=terraform fmt -check && terraform -chdir=terraform validate
-gh workflow run build-and-release.yaml -f version=1.34.1   # full build+release (draft); confirm first
-gh workflow run build.yaml        -f os=linux  -f arch=amd64 -f version=1.34.1   # one linux leg
-gh workflow run build-github.yaml -f os=darwin -f arch=arm64 -f version=1.34.1   # one darwin leg
+gh workflow run build-and-release.yaml -f version=1.39.1   # full build+release (draft); confirm first
+gh workflow run build.yaml -f arch=amd64 -f version=1.39.1   # one linux leg (AWS)
+gh workflow run build-github.yaml -f os=darwin -f arch=arm64 -f version=1.39.1   # one darwin leg
 gh run watch "$(gh run list -w build-and-release.yaml -L1 --json databaseId -q '.[0].databaseId')"
 objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu | tail -1   # glibc req
 ```
@@ -129,14 +130,15 @@ objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu 
 
 - ✅ **Native darwin build** (`make build/envoy` on a macOS host) — run and verify locally.
 - ✅ **Docker linux/centos build** (`build_linux.sh`, `build_centos.sh`) — run locally if Docker is available.
-- 🚫 **Terraform `apply`/`destroy`** — CI-only. Provisions **real AWS resources** (EC2, mac dedicated hosts, IAM) under `envoy-ci` in `us-east-2`. Locally limit to `fmt`/`validate`/`plan` (and `plan` only with credentials you were told to use).
-- 🚫 **Build/release workflows** — trigger only via `gh workflow run` with **explicit user confirmation**. Never auto-dispatch; mac hosts and draft releases are side-effecting. Don't cancel an in-progress build (Terraform may not clean up).
+- 🚫 **Terraform `apply`/`destroy`** — CI-only. Provisions **real AWS resources** (EC2, IAM) under `envoy-ci` in `us-east-2`. Locally limit to `fmt`/`validate`/`plan` (and `plan` only with credentials you were told to use).
+- 🚫 **Build/release workflows** — trigger only via `gh workflow run` with **explicit user confirmation**. Never auto-dispatch; EC2 VMs, macOS runners and draft releases are side-effecting. Don't cancel an in-progress build (Terraform may not clean up).
 
 ## Anti-Patterns
 
-- ❌ Leading `v` in `ENVOY_VERSION` / version input — `build-and-release` and `check-input` reject `v*`; use `1.34.1`.
-- ❌ Editing one version-gating map and not the siblings (e.g. bumping macOS runner but not LLVM/min-version). Builds fail in confusing ways.
-- ❌ `terraform apply`/`destroy` from a laptop, or cancelling a running build — orphans AWS hosts/roles.
+- ❌ Leading `v` in `ENVOY_VERSION` / version input — `build-and-release` and `check-input` reject `v*`; use `1.39.1`.
+- ❌ Editing one version-gating map and not the siblings (e.g. bumping LLVM gate but not the Hickory/Wasm gates). Builds fail in confusing ways.
+- ❌ Re-adding gates, map keys or patches for Envoy < 1.36.
+- ❌ `terraform apply`/`destroy` from a laptop, or cancelling a running build — orphans AWS instances/roles.
 - ❌ Enabling extra contrib extensions casually — only `kafka_broker` is intended; the disabled set is deliberate (build time/size, macOS compat).
 - ❌ Adding FIPS to darwin or arm64 matrix entries — FIPS is **linux/amd64 only**.
 - ❌ Suppressing linter findings (shellcheck/ruff/oxlint ignore) or bypassing hooks (`--no-verify`). Fix the root cause.
