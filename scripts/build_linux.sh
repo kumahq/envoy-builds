@@ -14,7 +14,6 @@ CONTRIB_ENABLED_MATRIX_SCRIPT=$(realpath "scripts/contrib_enabled_matrix.py")
 # Define Dockerfile patches per OS and version
 declare -A patch_per_version
 patch_per_version[main]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
-patch_per_version[v1.35]="$()"
 patch_per_version[v1.36]="$()"
 patch_per_version[v1.37]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
 patch_per_version[v1.38]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
@@ -50,7 +49,7 @@ echo "BUILD_CMD=${BUILD_CMD}"
 if [[ "${ENVOY_TAG}" == "main" || "${ENVOY_TAG}" == "master" ]]; then
   VERSION_KEY="${ENVOY_TAG}"
 else
-  # Extract major.minor from version tag (e.g., v1.35.8 -> v1.35)
+  # Extract major.minor from version tag (e.g., v1.39.1 -> v1.39)
   IFS=. read -r major minor rest <<< "${ENVOY_TAG}"
   VERSION_KEY="${major}.${minor}"
 fi

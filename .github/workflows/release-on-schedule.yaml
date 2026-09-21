@@ -55,7 +55,7 @@ jobs:
     if: ${{ needs.get-envoy-versions.outputs.versions_to_release != '[""]' }}
     needs: get-envoy-versions
     strategy:
-      max-parallel: 1
+      max-parallel: 1 # one version at a time - each build fans out to 3 EC2 VMs plus 2 macOS runners
       matrix:
         version: ${{ fromJson(needs.get-envoy-versions.outputs.versions_to_release) }}
       fail-fast: false

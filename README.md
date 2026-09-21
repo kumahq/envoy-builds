@@ -6,10 +6,10 @@ There is a new Makefile target `build/envoy` that places an `envoy` binary in `b
 
 ## Usage
 
-Build the latest supported Envoy binary for your host OS:
+Build a supported Envoy binary for your host OS:
 
 ```shell
-$ ENVOY_VERSION=1.35.8 make build/envoy
+$ ENVOY_VERSION=1.39.1 make build/envoy
 ```
 
 ## CI
@@ -19,7 +19,7 @@ in an AWS VM. Darwin binaries are built on GitHub-hosted macOS runners.
 
 ### Github workflow
 
-Run the `build-and-release.yaml` workflow with desired version of envoy without leading `v` (`1.35.8`) to build binaries
+Run the `build-and-release.yaml` workflow with desired version of envoy without leading `v` (`1.39.1`) to build binaries
 for linux/darwin amd64/arm64 and additionally a FIPS version for linux/amd64 and publish a _draft
 Github release_.
 

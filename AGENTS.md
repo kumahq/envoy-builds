@@ -24,15 +24,15 @@ Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`
 ## Local Build Commands
 
 ```bash
-ENVOY_VERSION=1.35.8 make build/envoy        # host OS/arch (NOTE: no leading "v")
+ENVOY_VERSION=1.39.1 make build/envoy        # host OS/arch (NOTE: no leading "v")
 make build/envoy                             # ENVOY_VERSION defaults to "main"
-ENVOY_VERSION=1.35.8 make build/envoy/fips   # FIPS (linux/amd64 only)
-ENVOY_DISTRO=centos ENVOY_VERSION=1.35.8 make build/envoy   # CentOS 7 variant
+ENVOY_VERSION=1.39.1 make build/envoy/fips   # FIPS (linux/amd64 only)
+ENVOY_DISTRO=centos ENVOY_VERSION=1.39.1 make build/envoy   # CentOS 7 variant
 make clean/envoy                             # clean sources + artifacts
 ```
 
 - `ENVOY_VERSION` is the primary knob (no `v`). Defaults to `main` (`ENVOY_VERSION ?= main`) → builds `main`; any other value → `ENVOY_TAG=v$ENVOY_VERSION`. Setting `ENVOY_TAG` directly is overridden by the Makefile — **use `ENVOY_VERSION`**.
-- Minimum supported Envoy version is **1.35**.
+- Minimum supported Envoy version is **1.36**.
 - `GOOS`/`GOARCH` default to the host (`go env`). `SOURCE_DIR` defaults to `$TMPDIR/envoy-sources`. Add `BAZEL_BUILD_EXTRA_OPTIONS` for extra Bazel flags.
 - Output: `build/artifacts-$GOOS-$GOARCH/envoy/envoy-v$VERSION[+fips][-centos]`.
 
@@ -44,13 +44,13 @@ Build behavior is gated on the Envoy minor version across many files — check e
 
 Build behavior is gated on the Envoy **minor** version in multiple files. When adding/fixing a version, check **every** entry — they must stay consistent. Grep the minor number across all gating files; updating one and forgetting siblings causes confusing build failures.
 
-Minimum supported Envoy version is **1.35** — don't reintroduce gates, keys or patches for older versions.
+Minimum supported Envoy version is **1.36** — don't reintroduce gates, keys or patches for older versions.
 
 | Gate | File | Behavior |
 |------|------|----------|
 | FIPS config flag | `Makefile` | `main` or minor ≥ **38** → `--config=boringssl-fips`; else `--define boringssl=fips` |
-| Ubuntu Dockerfile patch | `scripts/build_linux.sh` (`patch_per_version`) | Applied for `main`, `v1.37`–`v1.39`; empty for v1.35–v1.36 |
-| Darwin Lua patch | `scripts/fetch_sources.sh` (`patches_darwin`) | Applied for v1.35–v1.36; none for v1.37+ |
+| Ubuntu Dockerfile patch | `scripts/build_linux.sh` (`patch_per_version`) | Applied for `main`, `v1.37`–`v1.39`; empty for v1.36 |
+| Darwin Lua patch | `scripts/fetch_sources.sh` (`patches_darwin`) | Applied for v1.36; none for v1.37+ |
 | Generic source patch | `scripts/fetch_sources.sh` (`patches_per_version`) | Currently all empty — add here if upstream needs a source patch |
 | LLVM@18 (amd64) | `build-github.yaml` | `main`/minor ≥ **37** (darwin amd64) → install `llvm@18`, set `BAZEL_LLVM_PATH` |
 | Hickory DNS resolver | `build-github.yaml` | `main`/minor ≥ **38** → `--//source/extensions/network/dns_resolver/hickory:enabled=false` (no `@llvm_toolchain_llvm` on macOS) |
@@ -73,7 +73,7 @@ Minimum supported Envoy version is **1.35** — don't reintroduce gates, keys or
 - Patches live in `patches/`, named `<key>-NNNN-<desc>.patch`.
 - **Darwin Lua** patches (`vX.Y-0001-darwin-patch-lua.patch`) are git-applied to envoy sources in `scripts/fetch_sources.sh` for older versions only.
 - **Ubuntu Dockerfile** patch (`main-0001-linux-dockerfile-build-ubuntu.patch`) is `patch`-applied to `scripts/Dockerfile.build-ubuntu` in `scripts/build_linux.sh`.
-- Version key = `vMAJOR.MINOR` (e.g. `v1.35.8` → `v1.35`). An empty `"$()"` entry means "no patch for this version" — keep the key, leave it empty.
+- Version key = `vMAJOR.MINOR` (e.g. `v1.39.1` → `v1.39`). An empty `"$()"` entry means "no patch for this version" — keep the key, leave it empty.
 
 See the [Version-Gating Map](#version-gating-map) for which patch arrays apply per version.
 
@@ -119,9 +119,9 @@ Before committing / opening a PR:
 
 ```bash
 terraform -chdir=terraform fmt -check && terraform -chdir=terraform validate
-gh workflow run build-and-release.yaml -f version=1.35.8   # full build+release (draft); confirm first
-gh workflow run build.yaml -f arch=amd64 -f version=1.35.8   # one linux leg (AWS)
-gh workflow run build-github.yaml -f os=darwin -f arch=arm64 -f version=1.35.8   # one darwin leg
+gh workflow run build-and-release.yaml -f version=1.39.1   # full build+release (draft); confirm first
+gh workflow run build.yaml -f arch=amd64 -f version=1.39.1   # one linux leg (AWS)
+gh workflow run build-github.yaml -f os=darwin -f arch=arm64 -f version=1.39.1   # one darwin leg
 gh run watch "$(gh run list -w build-and-release.yaml -L1 --json databaseId -q '.[0].databaseId')"
 objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu | tail -1   # glibc req
 ```
@@ -135,9 +135,9 @@ objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu 
 
 ## Anti-Patterns
 
-- ❌ Leading `v` in `ENVOY_VERSION` / version input — `build-and-release` and `check-input` reject `v*`; use `1.35.8`.
+- ❌ Leading `v` in `ENVOY_VERSION` / version input — `build-and-release` and `check-input` reject `v*`; use `1.39.1`.
 - ❌ Editing one version-gating map and not the siblings (e.g. bumping LLVM gate but not the Hickory/Wasm gates). Builds fail in confusing ways.
-- ❌ Re-adding gates, map keys or patches for Envoy < 1.35.
+- ❌ Re-adding gates, map keys or patches for Envoy < 1.36.
 - ❌ `terraform apply`/`destroy` from a laptop, or cancelling a running build — orphans AWS instances/roles.
 - ❌ Enabling extra contrib extensions casually — only `kafka_broker` is intended; the disabled set is deliberate (build time/size, macOS compat).
 - ❌ Adding FIPS to darwin or arm64 matrix entries — FIPS is **linux/amd64 only**.
