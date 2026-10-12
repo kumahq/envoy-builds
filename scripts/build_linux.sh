@@ -19,10 +19,22 @@ patch_per_version[v1.37]="$(realpath "patches/main-0001-linux-dockerfile-build-u
 patch_per_version[v1.38]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
 patch_per_version[v1.39]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
 
+# main/v1.40+ removed "--config=clang" (hermetic clang+libc++ is the default)
+# and fail the build when it is passed.
+CLANG_CONFIG_OPTIONS=("--config=clang")
+if [[ "${ENVOY_TAG}" == "main" || "${ENVOY_TAG}" == "master" ]]; then
+  CLANG_CONFIG_OPTIONS=()
+else
+  IFS=. read -r _ minor _ <<< "${ENVOY_TAG}"
+  if [[ "${minor}" -ge 40 ]]; then
+    CLANG_CONFIG_OPTIONS=()
+  fi
+fi
+
 BAZEL_BUILD_EXTRA_OPTIONS=${BAZEL_BUILD_EXTRA_OPTIONS:-""}
 read -ra BAZEL_BUILD_EXTRA_OPTIONS <<< "${BAZEL_BUILD_EXTRA_OPTIONS}"
 BAZEL_BUILD_OPTIONS=(
-    "--config=clang"
+    "${CLANG_CONFIG_OPTIONS[@]+"${CLANG_CONFIG_OPTIONS[@]}"}"
     "--verbose_failures"
     "--experimental_ui_max_stdouterr_bytes=104857600"
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
