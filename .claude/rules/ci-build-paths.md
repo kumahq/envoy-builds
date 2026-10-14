@@ -4,7 +4,7 @@ The linux and darwin legs use **different** infrastructure — know which one yo
 
 | OS | Workflow | Runs on | Notes |
 |----|----------|---------|-------|
-| **linux** | `build.yaml` | AWS EC2 VM via Terraform | Linux-only (no `os` input). Generates SSH key, `terraform apply`, SSHes in, runs `make`, `scp`s the binary back, always `terraform destroy`. Assumes IAM role `envoy-ci`. |
+| **linux** | `build.yaml` | AWS EC2 VM via Terraform | Linux-only (no `os` input). Generates SSH key, `terraform apply`, SSHes in over SSM Session Manager (no inbound SG rules), runs `make`, `scp`s the binary back, always `terraform destroy`. Assumes IAM role `envoy-ci`. |
 | **darwin** | `build-github.yaml` | GitHub-hosted macOS runner | `select-runner` job picks `macos-15-large` (amd64) / `macos-15-xlarge` (arm64). Installs brew deps incl. `llvm@18`. No Terraform. |
 
 > `build-github.yaml` is **OS-agnostic**, not darwin-only — its `workflow_dispatch` accepts `os: darwin` or `linux`, and `select-runner` picks `ubuntu-24.04`/`ubuntu-24.04-arm` when `os == linux`. `build-and-release.yaml` is what routes darwin to it; `gh workflow run build-github.yaml -f os=linux ...` also works. The table maps each OS to the workflow the orchestrator uses for it.

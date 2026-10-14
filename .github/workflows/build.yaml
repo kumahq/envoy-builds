@@ -47,11 +47,15 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
-    env:
-      SSH_USER: admin
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # TODO use aws ssm
+      - name: Install Session Manager plugin
+        run: |
+          if ! command -v session-manager-plugin >/dev/null; then
+            curl -fsSL -o /tmp/session-manager-plugin.deb \
+              https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb
+            sudo dpkg -i /tmp/session-manager-plugin.deb
+          fi
       - name: Generate SSH key
         run: |
           ssh-keygen -t ed25519 -q -N "" -f ~/.ssh/id_aws
@@ -80,21 +84,35 @@ jobs:
       - run: terraform apply -input=false -auto-approve
         working-directory: terraform
         id: terraform-apply
-      - id: public-ip
-        working-directory: terraform
-        # setup-terraform saves stdout of terraform calls to outputs
-        run: terraform output --raw public_ip
       - id: instance-id
         working-directory: terraform
         # setup-terraform saves stdout of terraform calls to outputs
         run: terraform output -raw instance_id
+      - name: Configure SSH over SSM
+        env:
+          INSTANCE_ID: ${{ steps.instance-id.outputs.stdout }}
+        run: |
+          cat <<EOF >> ~/.ssh/config
+          Host build-vm
+            HostName ${INSTANCE_ID}
+            User admin
+            IdentityFile ~/.ssh/id_aws
+            StrictHostKeyChecking accept-new
+            ServerAliveInterval 60
+            ProxyCommand aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p
+          EOF
       - name: Wait for VM to be ready
-        working-directory: terraform
         timeout-minutes: 90
         env:
-          PUBLIC_IP: ${{ steps.public-ip.outputs.stdout }}
+          INSTANCE_ID: ${{ steps.instance-id.outputs.stdout }}
         run: |
-          while ! timeout 10 ssh -i ~/.ssh/id_aws -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${SSH_USER}@${PUBLIC_IP}" 'test -e ready'
+          until [[ "$(aws ssm describe-instance-information \
+            --filters "Key=InstanceIds,Values=${INSTANCE_ID}" \
+            --query 'InstanceInformationList[0].PingStatus' --output text)" == Online ]]
+          do
+            sleep 5
+          done
+          while ! timeout 30 ssh -o BatchMode=yes build-vm 'test -e ready'
           do
             sleep 5
           done
@@ -105,10 +123,12 @@ jobs:
           REPO: ${{ github.repository }}
           REPO_OWNER: ${{ github.repository_owner }}
           COMMIT_SHA: ${{ github.sha }}
-          PUBLIC_IP: ${{ steps.public-ip.outputs.stdout }}
         run: |
-          # Write build script to temp file (single-quoted heredoc prevents expansion)
-          cat > /tmp/build-envoy.sh <<'SCRIPT'
+          # Bake safely-quoted env vars into the script, then append the body
+          # (single-quoted heredoc prevents expansion)
+          printf 'export VERSION=%q FIPS=%q REPO=%q REPO_OWNER=%q COMMIT_SHA=%q\n' \
+            "$VERSION" "$FIPS" "$REPO" "$REPO_OWNER" "$COMMIT_SHA" > /tmp/build-envoy.sh
+          cat >> /tmp/build-envoy.sh <<'SCRIPT'
           set -e
           export ENVOY_VERSION="$VERSION"
           git clone "https://github.com/$REPO" && cd "${REPO#${REPO_OWNER}/}"
@@ -123,18 +143,14 @@ jobs:
           mv build ..
           SCRIPT
 
-          # Upload and execute build script with safely-quoted env vars
-          scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=accept-new /tmp/build-envoy.sh "${SSH_USER}@${PUBLIC_IP}:/tmp/build-envoy.sh"
-          ssh -i ~/.ssh/id_aws "${SSH_USER}@${PUBLIC_IP}" \
-            "$(printf 'export VERSION=%q FIPS=%q REPO=%q REPO_OWNER=%q COMMIT_SHA=%q;' \
-              "$VERSION" "$FIPS" "$REPO" "$REPO_OWNER" "$COMMIT_SHA") bash /tmp/build-envoy.sh"
+          scp /tmp/build-envoy.sh build-vm:/tmp/build-envoy.sh
+          ssh build-vm bash /tmp/build-envoy.sh
       - name: Download Envoy binaries
         env:
           INPUT_ARCH: ${{ inputs.arch }}
-          PUBLIC_IP: ${{ steps.public-ip.outputs.stdout }}
         run: |
-            envoy_dir="~/build/artifacts-linux-${INPUT_ARCH}/envoy"
-            scp -i ~/.ssh/id_aws -o StrictHostKeyChecking=accept-new -r "${SSH_USER}@${PUBLIC_IP}:${envoy_dir}" .
+            # relative remote paths resolve against the VM user's home
+            scp -r "build-vm:build/artifacts-linux-${INPUT_ARCH}/envoy" .
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: envoy-linux-${{ inputs.arch }}-${{ inputs.version }}-${{ inputs.fips }}
