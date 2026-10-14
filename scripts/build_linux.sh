@@ -18,6 +18,7 @@ patch_per_version[v1.36]="$()"
 patch_per_version[v1.37]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
 patch_per_version[v1.38]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
 patch_per_version[v1.39]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
+patch_per_version[v1.40]="$(realpath "patches/main-0001-linux-dockerfile-build-ubuntu.patch")"
 
 # main/v1.40+ removed "--config=clang" (hermetic clang+libc++ is the default)
 # and fail the build when it is passed.

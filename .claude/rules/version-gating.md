@@ -8,7 +8,7 @@ Minimum supported Envoy version is **1.36** — don't reintroduce gates, keys or
 |------|------|----------|
 | FIPS config flag | `Makefile` | `main` or minor ≥ **38** → `--config=boringssl-fips`; else `--define boringssl=fips` |
 | Clang config flag (linux) | `scripts/build_linux.sh` | `main` or minor ≥ **40** → no flag (hermetic clang+libc++ is default); else `--config=clang` (removed upstream in main — passing it is a hard build error) |
-| Ubuntu Dockerfile patch | `scripts/build_linux.sh` (`patch_per_version`) | Applied for `main`, `v1.37`–`v1.39`; empty for v1.36 |
+| Ubuntu Dockerfile patch | `scripts/build_linux.sh` (`patch_per_version`) | Applied for `main`, `v1.37`–`v1.40`; empty for v1.36 |
 | Darwin Lua patch | `scripts/fetch_sources.sh` (`patches_darwin`) | Applied for v1.36; none for v1.37+ |
 | Generic source patch | `scripts/fetch_sources.sh` (`patches_per_version`) | Currently all empty — add here if upstream needs a source patch |
 | LLVM@18 (amd64) | `build-github.yaml` | `main`/minor ≥ **37** (darwin amd64) → install `llvm@18`, set `BAZEL_LLVM_PATH` |
