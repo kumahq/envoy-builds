@@ -16,6 +16,11 @@ apt-get install -y \
     python3 \
     python-is-python3
 
+curl -fsSL -o /tmp/amazon-ssm-agent.deb \
+  https://s3.us-east-2.amazonaws.com/amazon-ssm-us-east-2/latest/debian_${var.arch}/amazon-ssm-agent.deb
+dpkg -i /tmp/amazon-ssm-agent.deb
+systemctl enable --now amazon-ssm-agent
+
 sudo mkdir -m 0755 -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 

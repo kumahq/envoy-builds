@@ -56,14 +56,17 @@ data "aws_subnet" "exisiting_subnet" {
   availability_zone = "us-east-2b"
 }
 
-module "security_group" {
-  source  = "terraform-aws-modules/security-group/aws//modules/ssh"
-  version = "4.17.1"
+# No ingress: the runner reaches the VM through SSM, so no port is exposed.
+resource "aws_security_group" "envoy-ci-build" {
+  name_prefix = "envoy-ci-build-"
+  vpc_id      = data.aws_vpc.exisiting_vpc.id
 
-  name   = "envoy-ci-ssh"
-  vpc_id = data.aws_vpc.exisiting_vpc.id
-
-  ingress_cidr_blocks = ["0.0.0.0/0"]
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 resource "aws_key_pair" "ci" {
@@ -90,7 +93,7 @@ resource "aws_instance" "envoy-ci-build" {
   }
 
   subnet_id              = data.aws_subnet.exisiting_subnet.id
-  vpc_security_group_ids = [module.security_group.security_group_id]
+  vpc_security_group_ids = [aws_security_group.envoy-ci-build.id]
 
   user_data = local.linux_user_data
 
@@ -124,10 +127,6 @@ resource "aws_iam_role" "role" {
 EOF
 
   managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore", "arn:aws:iam::aws:policy/AmazonS3FullAccess"]
-}
-
-output "public_ip" {
-  value = aws_instance.envoy-ci-build.public_ip
 }
 
 output "instance_id" {

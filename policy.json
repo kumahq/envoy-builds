@@ -23,6 +23,24 @@
         },
         {
             "Effect": "Allow",
+            "Action": "ssm:StartSession",
+            "Resource": [
+                "arn:aws:ec2:us-east-2:*:instance/*",
+                "arn:aws:ssm:us-east-2::document/AWS-StartSSHSession"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": "ssm:TerminateSession",
+            "Resource": "arn:aws:ssm:us-east-2:*:session/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "ssm:DescribeInstanceInformation",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
             "Action": "iam:ListInstanceProfilesForRole",
             "Resource": "arn:aws:iam::*:role/envoy-ci*"
         },
