@@ -38,6 +38,10 @@ BAZEL_BUILD_OPTIONS=(
     "${CLANG_CONFIG_OPTIONS[@]+"${CLANG_CONFIG_OPTIONS[@]}"}"
     "--verbose_failures"
     "--experimental_ui_max_stdouterr_bytes=104857600"
+    # toolshed 0.5.4+ exposes the sysroot as one directory artifact; rust actions also list
+    # files inside it, which the local sandbox cannot stage ("File exists").
+    "--strategy=CargoBuildScriptRun=local"
+    "--strategy=Rustc=local"
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
 BUILD_TARGET=${BUILD_TARGET:-"//contrib/exe:envoy-static"}
 
