@@ -33,6 +33,8 @@ BAZEL_BUILD_OPTIONS=(
     --//contrib/vcl/source:enabled=false
     "--action_env=PATH=/usr/local/bin:/opt/local/bin:/usr/bin:/bin:/opt/homebrew/bin"
     "${WASM_DISABLED_OPTIONS[@]}"
+    # splice_pump is Linux-only; its non-Linux stubs leave private fields unused (-Werror).
+    "--per_file_copt=source/extensions/transport_sockets/dynamic_modules/splice_pump.cc@-Wno-unused-private-field"
     "${BAZEL_BUILD_EXTRA_OPTIONS[@]+"${BAZEL_BUILD_EXTRA_OPTIONS[@]}"}")
 
 read -ra CONTRIB_ENABLED_ARGS <<< "$(python3 "${CONTRIB_ENABLED_MATRIX_SCRIPT}")"
