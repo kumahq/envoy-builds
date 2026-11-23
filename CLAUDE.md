@@ -1,6 +1,6 @@
 # envoy-builds
 
-Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`). Compiles Envoy from source for `linux`/`darwin` × `amd64`/`arm64`, plus a FIPS variant (linux/amd64) and a CentOS 7 variant, then publishes them as **draft GitHub releases**. No application code — Bash + Bazel + Docker + Terraform + GitHub Actions glue around the upstream `envoyproxy/envoy` build.
+Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`). Compiles Envoy from source for `linux`/`darwin` × `amd64`/`arm64`, plus a FIPS variant (linux/amd64, linux/arm64) and a CentOS 7 variant, then publishes them as **draft GitHub releases**. No application code — Bash + Bazel + Docker + Terraform + GitHub Actions glue around the upstream `envoyproxy/envoy` build.
 
 ## Tech Stack
 
@@ -26,7 +26,7 @@ Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`
 ```bash
 ENVOY_VERSION=1.39.1 make build/envoy        # host OS/arch (NOTE: no leading "v")
 make build/envoy                             # ENVOY_VERSION defaults to "main"
-ENVOY_VERSION=1.39.1 make build/envoy/fips   # FIPS (linux/amd64 only)
+ENVOY_VERSION=1.39.1 make build/envoy/fips   # FIPS (linux only)
 ENVOY_DISTRO=centos ENVOY_VERSION=1.39.1 make build/envoy   # CentOS 7 variant
 make clean/envoy                             # clean sources + artifacts
 ```
@@ -78,7 +78,7 @@ objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu 
 - ❌ Re-adding gates, map keys or patches for Envoy < 1.36.
 - ❌ `terraform apply`/`destroy` from a laptop, or cancelling a running build — orphans AWS instances/roles.
 - ❌ Enabling extra contrib extensions casually — only `kafka_broker` is intended; the disabled set is deliberate (build time/size, macOS compat).
-- ❌ Adding FIPS to darwin or arm64 matrix entries — FIPS is **linux/amd64 only**.
+- ❌ Adding FIPS to darwin matrix entries — FIPS is **linux only** (amd64, arm64).
 - ❌ Suppressing linter findings (shellcheck/ruff/oxlint ignore) or bypassing hooks (`--no-verify`). Fix the root cause.
 - ❌ Bumping an action to a floating tag/branch — pin the full SHA (dependabot manages these).
 - ❌ Hand-editing files synced from `kumahq/.github` (`meta_org.yml`, `CONTRIBUTING.md`, `CODEOWNERS`, `lifecycle.yml`) — overwritten upstream.

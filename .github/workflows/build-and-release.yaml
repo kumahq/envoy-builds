@@ -70,6 +70,7 @@ jobs:
           - { arch: amd64, fips: false }
           - { arch: amd64, fips: true }
           - { arch: arm64, fips: false }
+          - { arch: arm64, fips: true }
     uses: ./.github/workflows/build.yaml
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
