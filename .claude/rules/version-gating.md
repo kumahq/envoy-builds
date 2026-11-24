@@ -24,5 +24,5 @@ Minimum supported Envoy version is **1.36** — don't reintroduce gates, keys or
 1. Try a **local build first**: `ENVOY_VERSION=<x.y.z> make build/envoy` (native darwin) or via Docker for linux. Reproduce failures locally before touching CI.
 2. Walk the table above; add the new `vX.Y` key to every map that needs it (or confirm existing `≥ N` conditions already cover it). Don't update one map and forget the siblings.
 3. If upstream needs a source/Dockerfile fix, add a patch under `patches/` and wire it into `patches_per_version` / `patches_darwin` / `patch_per_version` with the **`vX.Y`** key (see `patch-system.md`).
-4. Verify FIPS: if minor ≥ 38, confirm the `--config=boringssl-fips` path builds (linux/amd64).
+4. Verify FIPS: if minor ≥ 38, confirm the `--config=boringssl-fips` path builds (linux/amd64 and linux/arm64).
 5. Trigger a real build via `gh workflow run` and confirm all matrix legs are green before releasing.

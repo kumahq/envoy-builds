@@ -13,7 +13,7 @@ on:
         type: string
         required: true
       fips:
-        description: Build FIPS (only linux amd64)
+        description: Build FIPS (linux only)
         required: false
         default: false
         type: boolean
@@ -35,7 +35,7 @@ on:
         type: choice
         required: true
       fips:
-        description: Build FIPS (only linux amd64)
+        description: Build FIPS (linux only)
         required: false
         default: false
         type: boolean

@@ -1,6 +1,6 @@
 # envoy-builds
 
-Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`). Compiles Envoy from source for `linux`/`darwin` × `amd64`/`arm64`, plus a FIPS variant (linux/amd64) and a CentOS 7 variant, then publishes them as **draft GitHub releases**. No application code — Bash + Bazel + Docker + Terraform + GitHub Actions glue around the upstream `envoyproxy/envoy` build.
+Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`). Compiles Envoy from source for `linux`/`darwin` × `amd64`/`arm64`, plus a FIPS variant (linux/amd64, linux/arm64) and a CentOS 7 variant, then publishes them as **draft GitHub releases**. No application code — Bash + Bazel + Docker + Terraform + GitHub Actions glue around the upstream `envoyproxy/envoy` build.
 
 ## Tech Stack
 
@@ -26,7 +26,7 @@ Build/release infrastructure for **Envoy proxy binaries** (`kumahq/envoy-builds`
 ```bash
 ENVOY_VERSION=1.39.1 make build/envoy        # host OS/arch (NOTE: no leading "v")
 make build/envoy                             # ENVOY_VERSION defaults to "main"
-ENVOY_VERSION=1.39.1 make build/envoy/fips   # FIPS (linux/amd64 only)
+ENVOY_VERSION=1.39.1 make build/envoy/fips   # FIPS (linux only)
 ENVOY_DISTRO=centos ENVOY_VERSION=1.39.1 make build/envoy   # CentOS 7 variant
 make clean/envoy                             # clean sources + artifacts
 ```
@@ -65,7 +65,7 @@ Minimum supported Envoy version is **1.36** — don't reintroduce gates, keys or
 1. Try a **local build first**: `ENVOY_VERSION=<x.y.z> make build/envoy` (native darwin) or via Docker for linux. Reproduce failures locally before touching CI.
 2. Walk the table above; add the new `vX.Y` key to every map that needs it (or confirm existing `≥ N` conditions already cover it). Don't update one map and forget the siblings.
 3. If upstream needs a source/Dockerfile fix, add a patch under `patches/` and wire it into `patches_per_version` / `patches_darwin` / `patch_per_version` with the **`vX.Y`** key (see [Patch System](#patch-system)).
-4. Verify FIPS: if minor ≥ 38, confirm the `--config=boringssl-fips` path builds (linux/amd64).
+4. Verify FIPS: if minor ≥ 38, confirm the `--config=boringssl-fips` path builds (linux/amd64 and linux/arm64).
 5. Trigger a real build via `gh workflow run` and confirm all matrix legs are green before releasing.
 
 ### Patch System
@@ -92,8 +92,8 @@ The linux and darwin legs use **different** infrastructure — know which one yo
 
 > `build-github.yaml` is **OS-agnostic**, not darwin-only — its `workflow_dispatch` accepts `os: darwin` or `linux`, and `select-runner` picks `ubuntu-24.04`/`ubuntu-24.04-arm` when `os == linux`. `build-and-release.yaml` is what routes darwin to it; `gh workflow run build-github.yaml -f os=linux ...` also works. The table maps each OS to the workflow the orchestrator uses for it.
 
-- **`build-and-release.yaml`** is the orchestrator. Matrix: linux `{amd64, amd64+fips, arm64}` via `build.yaml`; darwin `{amd64, arm64}` via `build-github.yaml`. Then `package` tars each binary as `envoy-<os>-<arch>-v<version>[+fips].tar.gz` (renamed to `envoy` inside the archive) and creates a **draft** release `v<version>`.
-- **FIPS is linux/amd64 only.** Don't add FIPS to darwin/arm64 matrix entries.
+- **`build-and-release.yaml`** is the orchestrator. Matrix: linux `{amd64, amd64+fips, arm64, arm64+fips}` via `build.yaml`; darwin `{amd64, arm64}` via `build-github.yaml`. Then `package` tars each binary as `envoy-<os>-<arch>-v<version>[+fips].tar.gz` (renamed to `envoy` inside the archive) and creates a **draft** release `v<version>`.
+- **FIPS is linux only** (amd64, arm64). Don't add FIPS to darwin matrix entries.
 - **`release-on-schedule.yaml`** (daily 00:00) diffs `envoyproxy/envoy` releases from the last 24h against existing `kumahq/envoy-builds` releases and builds any missing ones, `max-parallel: 1`.
 
 #### Build Flow (what actually happens)
@@ -140,7 +140,7 @@ objdump -T ./envoy | grep GLIBC | sed 's/.*GLIBC_\([.0-9]*\).*/\1/g' | sort -Vu 
 - ❌ Re-adding gates, map keys or patches for Envoy < 1.36.
 - ❌ `terraform apply`/`destroy` from a laptop, or cancelling a running build — orphans AWS instances/roles.
 - ❌ Enabling extra contrib extensions casually — only `kafka_broker` is intended; the disabled set is deliberate (build time/size, macOS compat).
-- ❌ Adding FIPS to darwin or arm64 matrix entries — FIPS is **linux/amd64 only**.
+- ❌ Adding FIPS to darwin matrix entries — FIPS is **linux only** (amd64, arm64).
 - ❌ Suppressing linter findings (shellcheck/ruff/oxlint ignore) or bypassing hooks (`--no-verify`). Fix the root cause.
 - ❌ Bumping an action to a floating tag/branch — pin the full SHA (dependabot manages these).
 - ❌ Hand-editing files synced from `kumahq/.github` (`meta_org.yml`, `CONTRIBUTING.md`, `CODEOWNERS`, `lifecycle.yml`) — overwritten upstream.
