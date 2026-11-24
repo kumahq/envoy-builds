@@ -13,7 +13,7 @@ set -o nounset
 declare -A patches_per_version
 patches_per_version[v1.36]="$()"
 patches_per_version[v1.37]="$()"
-patches_per_version[v1.38]="$()"
+patches_per_version[v1.38]="$(realpath "patches/v1.38-0001-contrib-fips-aarch64-select.patch")"
 patches_per_version[v1.39]="$()"
 
 declare -A patches_darwin

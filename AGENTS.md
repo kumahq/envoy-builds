@@ -51,7 +51,7 @@ Minimum supported Envoy version is **1.36** — don't reintroduce gates, keys or
 | FIPS config flag | `Makefile` | `main` or minor ≥ **38** → `--config=boringssl-fips`; else `--define boringssl=fips` |
 | Ubuntu Dockerfile patch | `scripts/build_linux.sh` (`patch_per_version`) | Applied for `main`, `v1.37`–`v1.39`; empty for v1.36 |
 | Darwin Lua patch | `scripts/fetch_sources.sh` (`patches_darwin`) | Applied for v1.36; none for v1.37+ |
-| Generic source patch | `scripts/fetch_sources.sh` (`patches_per_version`) | Currently all empty — add here if upstream needs a source patch |
+| Generic source patch | `scripts/fetch_sources.sh` (`patches_per_version`) | v1.38: backport of envoyproxy/envoy#45043 (ambiguous contrib `select` on arm64 + BoringSSL FIPS; applies to v1.38.1+, not v1.38.0); empty for other versions |
 | LLVM@18 (amd64) | `build-github.yaml` | `main`/minor ≥ **37** (darwin amd64) → install `llvm@18`, set `BAZEL_LLVM_PATH` |
 | Hickory DNS resolver | `build-github.yaml` | `main`/minor ≥ **38** → `--//source/extensions/network/dns_resolver/hickory:enabled=false` (no `@llvm_toolchain_llvm` on macOS) |
 | Wasm engine flag (darwin) | `scripts/build_darwin.sh` | `main` or minor ≥ **40** → `--@proxy-wasm-cpp-host//bazel:engine=disabled`; else `--define wasm=disabled` (removed upstream in main — passing it is a hard build error) |

@@ -1,0 +1,41 @@
+diff --git a/contrib/BUILD b/contrib/BUILD
+index 1a845f0d..baa5d227 100644
+--- a/contrib/BUILD
++++ b/contrib/BUILD
+@@ -1,3 +1,4 @@
++load("@bazel_skylib//lib:selects.bzl", "selects")
+ load("@envoy_toolshed//:macros.bzl", "json_data")
+ load("//bazel:envoy_build_system.bzl", "envoy_cc_test_library", "envoy_contrib_package")
+ load(":all_contrib_extensions.bzl", "SELECTED_CONTRIB_EXTENSIONS")
+@@ -7,6 +8,18 @@ licenses(["notice"])  # Apache 2
+ 
+ envoy_contrib_package()
+ 
++# Disambiguation for SELECTED_CONTRIB_EXTENSIONS' select, where both
++# "//bazel:linux_aarch64" and "//bazel:using_boringssl_fips" otherwise match for an
++# arm64 boringssl fips build. Backport of envoyproxy/envoy#45043.
++selects.config_setting_group(
++    name = "using_boringssl_fips_on_linux_x86_64",
++    match_all = [
++        "//bazel:using_boringssl_fips",
++        "//bazel:linux_x86_64",
++    ],
++    visibility = ["//visibility:public"],
++)
++
+ exports_files([
+     "extensions_metadata.yaml",
+     "contrib_build_config.bzl",
+diff --git a/contrib/all_contrib_extensions.bzl b/contrib/all_contrib_extensions.bzl
+index 3e5a0adc..aee591b4 100644
+--- a/contrib/all_contrib_extensions.bzl
++++ b/contrib/all_contrib_extensions.bzl
+@@ -63,7 +63,7 @@ SELECTED_CONTRIB_EXTENSIONS = select({
+     "//bazel:linux_aarch64": envoy_all_contrib_extensions(ARM64_SKIP_CONTRIB_TARGETS),
+     "//bazel:linux_ppc": envoy_all_contrib_extensions(PPC_SKIP_CONTRIB_TARGETS),
+     "//bazel:using_aws_lc": envoy_all_contrib_extensions(AWS_LC_SKIP_CONTRIB_TARGETS),
+-    "//bazel:using_boringssl_fips": envoy_all_contrib_extensions(BORINGSSL_FIPS_SKIP_CONTRIB_TARGETS),
++    "//contrib:using_boringssl_fips_on_linux_x86_64": envoy_all_contrib_extensions(BORINGSSL_FIPS_SKIP_CONTRIB_TARGETS),
+     "//bazel:using_openssl": envoy_all_contrib_extensions(OPENSSL_SKIP_CONTRIB_TARGETS),
+     "//conditions:default": envoy_all_contrib_extensions(X86_SKIP_CONTRIB_TARGETS),
+ })
